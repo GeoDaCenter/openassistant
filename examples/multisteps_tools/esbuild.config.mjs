@@ -2,12 +2,6 @@ import esbuild from 'esbuild';
 import open from 'open';
 import fs from 'fs';
 import tailwindPlugin from 'esbuild-plugin-tailwindcss';
-import process from 'node:process';
-import dotenv from 'dotenv';
-import { polyfillNode } from 'esbuild-plugin-polyfill-node';
-
-
-dotenv.config();
 
 const isStart = process.argv.includes('--start');
 const port = 3003;
@@ -16,12 +10,10 @@ const config = {
   entryPoints: ['src/main.tsx'],
   bundle: true,
   outdir: 'build',
-  minify: false,
-  sourcemap: true,
-  platform: 'browser',
-  format: 'iife',
-  logLevel: 'info',
+  minify: !isStart,
+  sourcemap: isStart,
   metafile: true,
+  target: ['chrome58', 'firefox57', 'safari11'],
   loader: {
     '.js': 'jsx',
     '.ts': 'tsx',
@@ -32,21 +24,22 @@ const config = {
   },
   define: {
     'process.env.NODE_ENV': isStart ? '"development"' : '"production"',
-    'process.env.OPENAI_TOKEN': JSON.stringify(process.env.OPENAI_TOKEN || ''),
+    'process.env.OPENAI_TOKEN': JSON.stringify(
+      process.env.OPENAI_API_KEY || ''
+    ),
   },
   jsx: 'automatic',
   plugins: [
     tailwindPlugin({
       config: './tailwind.config.js',
     }),
-    polyfillNode(),
   ],
   alias: {
-    react: './node_modules/react',
-    'react-dom': './node_modules/react-dom',
-    'styled-components': './node_modules/styled-components',
-    'd3-request': './node_modules/d3-request',
-    xmlhttprequest: './node_modules/xmlhttprequest',
+    '@openassistant/core': '../../packages/core/src',
+    '@openassistant/common': '../../packages/common/src',
+    '@openassistant/ui': '../../packages/ui/src',
+    react: '../../node_modules/react',
+    'react-dom': '../../node_modules/react-dom',
   },
 };
 

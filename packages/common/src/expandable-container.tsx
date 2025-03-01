@@ -8,11 +8,12 @@ import { cloneElement, DragEventHandler, useRef, useState } from 'react';
 import { ResizablePlotContainer } from './resizable-container';
 import { Popover } from '@nextui-org/react';
 import { Icon } from '@iconify/react';
+import { EChartsSkeleton } from './echarts-skeleton';
 
 export function ExpandableContainer({
   children,
-  defaultWidth = 600,
-  defaultHeight = 800,
+  defaultWidth,
+  defaultHeight,
   draggable = false,
   onDragStart,
 }: {
@@ -31,29 +32,37 @@ export function ExpandableContainer({
   };
 
   return (
-    <ResizablePlotContainer>
+    <ResizablePlotContainer
+      {...(defaultWidth ? { defaultWidth } : {})}
+      {...(defaultHeight ? { defaultHeight } : {})}
+    >
       <div
         className={`h-full w-full relative rounded-md${
           isExpanded ? ' border border-default-200 p-1' : ''
         }`}
       >
-        {!isExpanded &&
+        {!isExpanded ? (
           cloneElement(children, {
             isExpanded: false,
             setIsExpanded: setIsExpanded,
-          })}
+          })
+        ) : (
+          <EChartsSkeleton />
+        )}
         <div className="group absolute top-0 right-0 mt-2 mr-2 cursor-pointer flex flex-row">
-          <Button
-            isIconOnly
-            size="sm"
-            variant="light"
-            onClick={onExpandComponent}
-            draggable={draggable}
-            onDragStart={onDragStart}
-            className="opacity-0 hover:opacity-100 group-hover:opacity-100 transition-opacity cursor-move"
-          >
-            <Icon icon="basil:move-outline" width="12" height="12" />
-          </Button>
+          {draggable && (
+            <Button
+              isIconOnly
+              size="sm"
+              variant="light"
+              onClick={onExpandComponent}
+              draggable={draggable}
+              onDragStart={onDragStart}
+              className="opacity-0 hover:opacity-100 group-hover:opacity-100 transition-opacity cursor-move"
+            >
+              <Icon icon="basil:move-outline" width="12" height="12" />
+            </Button>
+          )}
           <Popover
             isOpen={isExpanded}
             placement="left"

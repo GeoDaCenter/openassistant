@@ -5,6 +5,15 @@ import {
 } from '@openassistant/core';
 import React from 'react';
 
+export type SendTextMessageHandlerProps = {
+  newMessage: string;
+  messages: MessageModel[];
+  setMessages: (value: React.SetStateAction<MessageModel[]>) => void;
+  setTypingIndicator: (value: React.SetStateAction<boolean>) => void;
+  sendTextMessage: (props: SendTextMessageProps) => Promise<void>;
+  onMessagesUpdated?: (messages: MessageModel[]) => void;
+};
+
 export async function sendTextMessageHandler({
   newMessage,
   messages,
@@ -12,14 +21,7 @@ export async function sendTextMessageHandler({
   setTypingIndicator,
   sendTextMessage,
   onMessagesUpdated,
-}: {
-  newMessage: string;
-  messages: MessageModel[];
-  setMessages: (value: React.SetStateAction<MessageModel[]>) => void;
-  setTypingIndicator: (value: React.SetStateAction<boolean>) => void;
-  sendTextMessage: (props: SendTextMessageProps) => Promise<void>;
-  onMessagesUpdated?: (messages: MessageModel[]) => void;
-}) {
+}: SendTextMessageHandlerProps) {
   // set prompting to true, to show typing indicator
   setTypingIndicator(true);
 
@@ -31,8 +33,14 @@ export async function sendTextMessageHandler({
       direction: 'outgoing',
       sender: 'user',
       position: 'normal',
+      messageContent: {
+        reasoning: '',
+        toolCallMessages: [],
+        text: newMessage,
+      },
     },
   ];
+
   // add incoming message to show typing indicator for chatbot
   setMessages([
     ...updatedMesssages,
@@ -41,14 +49,26 @@ export async function sendTextMessageHandler({
       direction: 'incoming',
       sender: 'assistant',
       position: 'normal',
+      messageContent: {
+        reasoning: '',
+        toolCallMessages: [],
+        text: '',
+      },
     },
   ]);
+
+  
   // send message to AI model
   try {
     // send message to AI model
     await sendTextMessage({
       message: newMessage,
-      streamMessageCallback: ({ deltaMessage, customMessage, isCompleted }) => {
+      streamMessageCallback: ({
+        deltaMessage,
+        customMessage,
+        isCompleted,
+        message,
+      }) => {
         // update the last message with the response
         const newMessages: MessageModel[] = [
           ...updatedMesssages,
@@ -58,7 +78,8 @@ export async function sendTextMessageHandler({
             sender: 'assistant',
             position: 'normal',
             payload: customMessage,
-          },
+            messageContent: message,
+          }
         ];
         setMessages(newMessages);
         if (isCompleted) {
@@ -92,6 +113,16 @@ export async function sendTextMessageHandler({
   }
 }
 
+export type SendImageMessageHandlerProps = {
+  newMessage: string;
+  imageBase64String: string;
+  messages: MessageModel[];
+  setMessages: (value: React.SetStateAction<MessageModel[]>) => void;
+  setTypingIndicator: (value: React.SetStateAction<boolean>) => void;
+  sendImageMessage: (props: SendImageMessageProps) => Promise<void>;
+  onMessagesUpdated?: (messages: MessageModel[]) => void;
+};
+
 export async function sendImageMessageHandler({
   newMessage,
   imageBase64String,
@@ -100,15 +131,7 @@ export async function sendImageMessageHandler({
   setTypingIndicator,
   sendImageMessage,
   onMessagesUpdated,
-}: {
-  newMessage: string;
-  imageBase64String: string;
-  messages: MessageModel[];
-  setMessages: (value: React.SetStateAction<MessageModel[]>) => void;
-  setTypingIndicator: (value: React.SetStateAction<boolean>) => void;
-  sendImageMessage: (props: SendImageMessageProps) => Promise<void>;
-  onMessagesUpdated?: (messages: MessageModel[]) => void;
-}) {
+}: SendImageMessageHandlerProps) {
   // set prompting to true, to show typing indicator
   setTypingIndicator(true);
 
