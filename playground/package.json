@@ -1,6 +1,7 @@
 {
   "name": "playground",
   "version": "0.2.0",
+  "private": true,
   "main": "index.js",
   "keywords": [],
   "author": "",
@@ -20,12 +21,12 @@
     "@iconify/react": "^5.1.0",
     "@lexical/react": "^0.23.1",
     "@nextui-org/theme": "^2.4.4",
-    "@openassistant/common": "latest",
-    "@openassistant/core": "latest",
-    "@openassistant/duckdb": "latest",
-    "@openassistant/echarts": "latest",
-    "@openassistant/keplergl": "latest",
-    "@openassistant/ui": "latest",
+    "@openassistant/common": "0.2.0",
+    "@openassistant/core": "0.2.0",
+    "@openassistant/duckdb": "0.2.0",
+    "@openassistant/echarts": "0.2.0",
+    "@openassistant/keplergl": "0.2.0",
+    "@openassistant/ui": "0.2.0",
     "apache-arrow": "13.0.0",
     "github-markdown-css": "^5.8.1",
     "next": "^14.2.21",
@@ -53,11 +54,16 @@
     "autoprefixer": "^10.4.20",
     "bufferutil": "^4.0.9",
     "copy-webpack-plugin": "^12.0.2",
+    "esbuild-plugin-tailwindcss": "^2.0.1",
     "eslint": "^9.18.0",
     "eslint-config-next": "^15.1.5",
     "postcss": "^8.5.1",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.3",
     "utf-8-validate": "^6.0.5"
+  },
+  "resolutions": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
   }
 }
