@@ -19,8 +19,9 @@ import {
   CardBody,
 } from '@nextui-org/react';
 import { Icon } from '@iconify/react';
+import '../index.css';
 
-const MarkdownContent = ({
+export const MarkdownContent = ({
   text,
   showMarkdown = true,
 }: {
@@ -29,22 +30,32 @@ const MarkdownContent = ({
 }) => {
   if (!showMarkdown) {
     return (
-      <div className="max-w-full overflow-hidden whitespace-pre-wrap break-words">
+      <div className="max-w-full overflow-hidden whitespace-pre-wrap break-words line-[0.5]">
         {text}
       </div>
     );
   }
 
   return (
-    <div className="markdown-body max-w-full overflow-hidden whitespace-pre-wrap break-words">
+    <div className="max-w-full overflow-hidden whitespace-pre-wrap break-words">
       <Markdown
         remarkPlugins={[remarkGfm]}
         components={{
-          pre: ({ children }) => (
-            <pre className="max-w-full overflow-x-auto">{children}</pre>
+          ul: ({ children }) => <ul className="list-disc ml-5">{children}</ul>,
+          ol: ({ children }) => (
+            <ol className="list-decimal ml-8 -mt-5">{children}</ol>
           ),
-          code: ({ children }) => (
-            <code className="max-w-full overflow-x-auto">{children}</code>
+          li: ({ children }) => (
+            // Used Tailwind's CSS nesting syntax to target p tags directly inside li elements with [&>p]
+            // Added !mt-0 to force margin-top to 0
+            // Used -translate-y-5 to move the paragraph up by 1.25rem to align with the marker
+            // Added negative margin bottom to compensate for the translated paragraph
+            <li className="my-0 h-fit min-h-0 [&>p]:-mb-6 [&>p]:!mt-0 [&>p]:-translate-y-5 [&>p]:h-fit [&>p]:leading-5">
+              {children}
+            </li>
+          ),
+          p: ({ children }) => (
+            <p className="text-sm whitespace-pre-wrap m-0 p-0">{children}</p>
           ),
         }}
       >
@@ -89,10 +100,12 @@ export function PartComponent({
   part,
   components,
   useMarkdown,
+  showTools,
 }: {
   part: StreamMessagePart;
   components?: ToolCallComponents;
   useMarkdown?: boolean;
+  showTools?: boolean;
 }) {
   if (part.type === 'text') {
     return (
@@ -102,7 +115,7 @@ export function PartComponent({
         </div>
       </div>
     );
-  } else if (part.type === 'tool') {
+  } else if (part.type === 'tool' && showTools) {
     return (
       <>
         {part.toolCallMessages.map((toolCallMessage) => (
@@ -143,11 +156,12 @@ export function ToolCallComponent({
 
   return (
     <div className="flex flex-col gap-2">
-      <Card>
-        <CardBody>
+      <Card radius="none" shadow="none" classNames={{ body: 'p-0 pl-2 pr-2' }}>
+        <CardBody className="opacity-50">
           <Accordion
             variant="light"
             isCompact={true}
+            className="pt-6 text-tiny"
             itemClasses={{
               title: 'text-tiny',
               content: 'text-tiny',
@@ -155,8 +169,9 @@ export function ToolCallComponent({
           >
             <AccordionItem
               key="1"
+              isCompact={true}
               aria-label={toolName}
-              title={`> call ${toolName}`}
+              title={`> ${toolName}`}
               startContent={
                 !isCompleted && (
                   <Icon icon="svg-spinners:clock" width="12" height="12" />

@@ -1,9 +1,10 @@
-import AutoSizer from 'react-virtualized-auto-sizer';
+import { useState } from 'react';
+import { ExpandableContainer, generateId } from '@openassistant/common';
 import { BubbleChartOutputData, BubbleChart } from './bubble-chart';
-
+import { useDraggable } from '../../hooks/useDraggable';
 /**
  * A React component that renders an interactive bubble chart visualization.
- * 
+ *
  * @param props BubbleChartOutputData - The configuration and data for the bubble chart:
  *   - datasetName: string - The name of the dataset being visualized
  *   - data: object - The chart data containing:
@@ -14,9 +15,9 @@ import { BubbleChartOutputData, BubbleChart } from './bubble-chart';
  *   - theme?: string - Optional theme setting for the chart
  *   - isExpanded?: boolean - Optional flag to control chart expansion state
  *   - isDraggable?: boolean - Optional flag to enable/disable drag functionality
- * 
+ *
  * @returns A responsive bubble chart wrapped in an auto-sizing container
- * 
+ *
  * @example
  * <BubbleChartComponent
  *   datasetName="Sample Dataset"
@@ -32,18 +33,40 @@ export function BubbleChartComponent(
   props: BubbleChartOutputData
 ): JSX.Element | null {
   return (
-    <AutoSizer>
-      {({ height, width }) => (
-        <div style={{ height, width }} className="relative">
-          <div className="h-full w-full flex flex-col rounded-lg gap-2 p-6 text-gray-900 shadow-secondary-1 dark:bg-gray-950 dark:text-gray-100">
-            <div className="relative h-full py-2 flex-grow dark:bg-black">
-              <div className="absolute left-0 top-0 h-full w-full">
-                <BubbleChart {...props} />
-              </div>
-            </div>
-          </div>
+    <div className="relative h-full w-full flex flex-col rounded-lg gap-2 pt-6 text-gray-900 shadow-secondary-1  dark:text-gray-100">
+      <div className="relative h-full py-2 flex-grow ">
+        <div className="absolute left-0 top-0 h-full w-full">
+          <BubbleChart {...props} />
         </div>
-      )}
-    </AutoSizer>
+      </div>
+    </div>
+  );
+}
+
+export function BubbleChartComponentContainer(
+  props: BubbleChartOutputData
+): JSX.Element | null {
+  const [isExpanded, setIsExpanded] = useState(props.isExpanded);
+
+  const onDragStart = useDraggable({
+    id: props.id || generateId(),
+    type: 'bubble',
+    data: props,
+  });
+
+  const onExpanded = (flag: boolean) => {
+    setIsExpanded(flag);
+  };
+
+  return (
+    <ExpandableContainer
+      defaultWidth={isExpanded ? 600 : undefined}
+      defaultHeight={isExpanded ? 600 : 380}
+      draggable={props.isDraggable || false}
+      onDragStart={onDragStart}
+      onExpanded={onExpanded}
+    >
+      <BubbleChartComponent {...props} />
+    </ExpandableContainer>
   );
 }

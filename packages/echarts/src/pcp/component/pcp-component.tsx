@@ -1,5 +1,7 @@
-import AutoSizer from 'react-virtualized-auto-sizer';
 import { ParallelCoordinateOutputData, ParallelCoordinatePlot } from './pcp';
+import { ExpandableContainer, generateId } from '@openassistant/common';
+import { useState } from 'react';
+import { useDraggable } from '../../hooks/useDraggable';
 
 /**
  * Props for the ParallelCoordinateComponent, extending ParallelCoordinateOutputData
@@ -14,18 +16,40 @@ export function ParallelCoordinateComponent(
   props: ParallelCoordinateOutputData
 ): JSX.Element | null {
   return (
-    <AutoSizer>
-      {({ height, width }) => (
-        <div style={{ height, width }} className="relative">
-          <div className="h-full w-full flex flex-col rounded-lg gap-2 p-6 text-gray-900 shadow-secondary-1 dark:bg-gray-950 dark:text-gray-100">
-            <div className="relative h-full py-2 flex-grow dark:bg-black">
-              <div className="absolute left-0 top-0 h-full w-full">
-                <ParallelCoordinatePlot {...props} />
-              </div>
-            </div>
-          </div>
+    <div className="relative h-full w-full flex flex-col rounded-lg gap-2 pt-6 text-gray-900 shadow-secondary-1  dark:text-gray-100">
+      <div className="relative h-full py-2 flex-grow ">
+        <div className="absolute left-0 top-0 h-full w-full">
+          <ParallelCoordinatePlot {...props} />
         </div>
-      )}
-    </AutoSizer>
+      </div>
+    </div>
+  );
+}
+
+export function ParallelCoordinateComponentContainer(
+  props: ParallelCoordinateOutputData
+): JSX.Element | null {
+  const [isExpanded, setIsExpanded] = useState(props.isExpanded);
+
+  const onDragStart = useDraggable({
+    id: props.id || generateId(),
+    type: 'bubble',
+    data: props,
+  });
+
+  const onExpanded = (flag: boolean) => {
+    setIsExpanded(flag);
+  };
+
+  return (
+    <ExpandableContainer
+      defaultWidth={isExpanded ? 600 : undefined}
+      defaultHeight={isExpanded ? 600 : 380}
+      draggable={props.isDraggable || false}
+      onDragStart={onDragStart}
+      onExpanded={onExpanded}
+    >
+      <ParallelCoordinatePlot {...props} />
+    </ExpandableContainer>
   );
 }

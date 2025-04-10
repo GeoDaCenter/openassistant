@@ -1,0 +1,28 @@
+{
+  "name": "echarts-tools-example",
+  "private": true,
+  "version": "1.0.0",
+  "description": "React app using OpenAssistant with ECharts",
+  "scripts": {
+    "start": "node esbuild.config.mjs --start",
+    "build": "node esbuild.config.mjs"
+  },
+  "author": "Xun Li <lixun910@gmail.com>",
+  "license": "ISC",
+  "dependencies": {
+    "@openassistant/core": "workspace:*",
+    "@openassistant/echarts": "workspace:*",
+    "@openassistant/ui": "workspace:*",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "autoprefixer": "^10.4.20",
+    "esbuild": "^0.24.2",
+    "open": "^10.1.0",
+    "postcss": "^8.4.49",
+    "tailwind": "^4.0.0"
+  }
+}

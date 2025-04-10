@@ -4,7 +4,7 @@ import {
   StreamMessage,
   ToolCallComponents,
 } from '@openassistant/core';
-import { PartComponent } from './message-toolcall';
+import { MarkdownContent, PartComponent } from './message-toolcall';
 
 const FailedMessage = ({ githubIssueLink }: { githubIssueLink?: string }) => (
   <p className="mb-2" data-testid="failed-message">
@@ -32,6 +32,7 @@ type MessageContentProps = {
   status?: 'success' | 'failed' | 'pending';
   useMarkdown?: boolean;
   components?: ToolCallComponents;
+  showTools?: boolean;
 };
 
 export function MessageContent({
@@ -42,9 +43,10 @@ export function MessageContent({
   status,
   useMarkdown,
   components,
+  showTools,
 }: MessageContentProps) {
   return (
-    <>
+    <div style={{ paddingRight: '30px' }}>
       <div className="flex flex-col gap-4">
         {/* show screenshot image */}
         {customMessage &&
@@ -63,11 +65,18 @@ export function MessageContent({
             part={part}
             components={components}
             useMarkdown={useMarkdown}
+            showTools={showTools}
           />
         ))}
 
         {/* show markdown message */}
-        {useMarkdown && !message?.parts && message?.text}
+        {!message?.parts &&
+          message?.text &&
+          (useMarkdown ? (
+            <MarkdownContent text={message.text} />
+          ) : (
+            <div>{message.text}</div>
+          ))}
       </div>
 
       {/* show loading spinner */}
@@ -79,6 +88,6 @@ export function MessageContent({
           data-testid="spinner-icon"
         />
       )}
-    </>
+    </div>
   );
 }

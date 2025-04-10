@@ -1,16 +1,88 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { tool } from '@openassistant/core';
 import { Table as ArrowTable, tableFromArrays } from 'apache-arrow';
 import { z } from 'zod';
-import { getDuckDB } from './query';
+import { getDuckDB, QueryDuckDBFunctionContext } from './query';
 import { QueryDuckDBComponent } from './queryTable';
+
+/**
+ * The localQuery tool is used to execute a query against a local dataset.
+ *
+ * @example
+ * ```typescript
+ * import { localQuery } from '@openassistant/duckdb';
+ *
+ * const localQueryTool = {
+ *   ...localQuery,
+ *   context: {
+ *     ...localQuery.context,
+ *     getValues: (datasetName: string, variableName: string) => {
+ *       // get the values of the variable from your dataset, e.g.
+ *       return SAMPLE_DATASETS[datasetName].map((item) => item[variableName]);
+ *     },
+ *   },
+ * }
+ * ```
+ *
+ * ### getValues()
+ *
+ * User implements this function to get the values of the variable from dataset.
+ *
+ * For prompts like "_Show me the revenue per capita for each location in dataset myVenues_", the tool will
+ * call the `getValues()` function twice:
+ * - get the values of **revenue** from dataset: getValues('myVenues', 'revenue')
+ * - get the values of **population** from dataset: getValues('myVenues', 'population')
+ *
+ * A duckdb table will be created using the values returned from `getValues()`, and LLM will generate a sql query to query the table to answer the user's prompt.
+ *
+ * ### onSelected()
+ *
+ * User implements this function to sync the selections of the query result table with the original dataset.
+ *
+ */
+export const localQuery = tool({
+  description:
+    'You are a SQL (duckdb) expert. You can help to generate select query clause using the content of the dataset.',
+  parameters: z.object({
+    datasetName: z.string().describe('The name of the original dataset.'),
+    variableNames: z
+      .array(z.string())
+      .describe('The names of the variables to include in the query.'),
+    sql: z
+      .string()
+      .describe(
+        'The SQL query to execute. Please follow the SQL syntax of duckdb.'
+      ),
+    dbTableName: z
+      .string()
+      .describe('The name of the table used in the sql string.'),
+  }),
+  execute: executeLocalQuery,
+  context: {
+    getValues: () => {
+      // get the values of the variable from the dataset,
+      // the values will be used to create and plot the histogram
+      throw new Error('getValues() of LocalQueryTool is not implemented');
+    },
+    onSelected: () => {
+      // sync the selections of the query result table with the original dataset
+      throw new Error('onSelected() of LocalQueryTool is not implemented');
+    },
+    config: {
+      isDraggable: false,
+    },
+    duckDB: null,
+  },
+  component: QueryDuckDBComponent,
+});
+
 
 async function executeLocalQuery(
   { datasetName, variableNames, sql, dbTableName },
   options
 ) {
   try {
-    const { getValues, onSelected, config, duckDB } = options.context;
+    const { getValues, config, duckDB } =
+      options.context as QueryDuckDBFunctionContext;
     // if the variable names contain 'row_index', ignore it
     // the row_index will be added later based on the columnData length
     // the row_index is used to sync the selections of the query result table with the original dataset
@@ -70,7 +142,7 @@ async function executeLocalQuery(
         variableNames,
         datasetName,
         dbTableName,
-        onSelected,
+        config,
       },
     };
   } catch (error) {
@@ -84,89 +156,3 @@ async function executeLocalQuery(
     };
   }
 }
-
-/**
- * The localQuery tool is used to execute a query against a local dataset.
- *
- * @example
- * ```typescript
- * import { localQuery } from '@openassistant/duckdb';
- *
- * const localQueryTool = {
- *   ...localQuery,
- *   context: {
- *     ...localQuery.context,
- *     getValues: (datasetName: string, variableName: string) => {
- *       // get the values of the variable from your dataset, e.g.
- *       return SAMPLE_DATASETS[datasetName].map((item) => item[variableName]);
- *     },
- *   },
- * }
- * ```
- *
- * - getValues()
- *
- * User implements this function to get the values of the variable from dataset.
- * See @see {LocalQueryContext.getValues}
- *
- * For prompts like "Show me the revenue per capita for each location in dataset myVenues", the tool will
- * call the `getValues()` function twice:
- * - first time to get the values of revenue from dataset: getValues('myVenues', 'revenue')
- * - second time to get the values of population from dataset: getValues('myVenues', 'population')
- *
- * A duckdb table will be created using the values returned from `getValues()`, and LLM will generate a sql query to query the table to answer the user's prompt.
- *
- * - onSelected()
- *
- * User implements this function to sync the selections of the query result table with the original dataset.
- * See @see {LocalQueryContext.onSelected}
- *
- */
-export const localQuery = tool({
-  description:
-    'You are a SQL (duckdb) expert. You can help to generate select query clause using the content of the dataset.',
-  parameters: z.object({
-    datasetName: z.string().describe('The name of the original dataset.'),
-    variableNames: z
-      .array(z.string())
-      .describe('The names of the variables to include in the query.'),
-    sql: z
-      .string()
-      .describe(
-        'The SQL query to execute. Please follow the SQL syntax of duckdb.'
-      ),
-    dbTableName: z
-      .string()
-      .describe('The name of the table used in the sql string.'),
-  }),
-  execute: executeLocalQuery,
-  context: {
-    getValues: ({
-      datasetName,
-      variableName,
-    }: {
-      datasetName: string;
-      variableName: string;
-    }): unknown[] => {
-      // get the values of the variable from the dataset,
-      // the values will be used to create and plot the histogram
-      return [];
-    },
-    onSelected: ({
-      datasetName,
-      columnName,
-      selectedValues,
-    }: {
-      datasetName: string;
-      columnName: string;
-      selectedValues: unknown[];
-    }) => {
-      // sync the selections of the query result table with the original dataset
-    },
-    config: {
-      isDraggable: false,
-    },
-    duckDB: null,
-  },
-  component: QueryDuckDBComponent,
-});

@@ -1,7 +1,5 @@
-import { useCallback, DragEvent } from 'react';
-import AutoSizer from 'react-virtualized-auto-sizer';
+import { useState } from 'react';
 import {
-  Button,
   Table,
   TableHeader,
   TableBody,
@@ -9,10 +7,16 @@ import {
   TableRow,
   TableCell,
 } from '@nextui-org/react';
-import { Icon } from '@iconify/react';
 import { Boxplot, BoxplotOutputData } from './box-plot';
 import { BoxplotDataProps } from './utils';
 import { ExpandableContainer } from '@openassistant/common';
+import { useDraggable } from '../../hooks/useDraggable';
+
+export function BoxplotToolComponent(
+  props: BoxplotOutputData
+): JSX.Element | null {
+  return <BoxplotComponent {...props} />;
+}
 
 /**
  * BoxplotComponentContainer for rendering box plot visualizations with expandable container.
@@ -28,26 +32,25 @@ import { ExpandableContainer } from '@openassistant/common';
 export function BoxplotComponentContainer(
   props: BoxplotOutputData
 ): JSX.Element | null {
-  const onDragStart = (e: DragEvent<HTMLButtonElement>) => {
-    e.dataTransfer.setData(
-      'text/plain',
-      JSON.stringify({
-        id: props.id,
-        type: 'boxplot',
-        data: props,
-      })
-    );
+  const [isExpanded, setIsExpanded] = useState(props.isExpanded);
 
-    // prevent the event from propagating
-    e.stopPropagation();
+  const onDragStart = useDraggable({
+    id: props.id,
+    type: 'boxplot',
+    data: props,
+  });
+
+  const onExpanded = (flag: boolean) => {
+    setIsExpanded(flag);
   };
 
   return (
     <ExpandableContainer
-      defaultWidth={600}
-      defaultHeight={800}
+      defaultWidth={isExpanded ? 600 : undefined}
+      defaultHeight={isExpanded ? 600 : props.variables.length * 100 + 120}
       draggable={props.isDraggable || false}
       onDragStart={onDragStart}
+      onExpanded={onExpanded}
     >
       <BoxplotComponent {...props} />
     </ExpandableContainer>
@@ -62,10 +65,6 @@ export function BoxplotComponentContainer(
  * @returns Box plot visualization with optional detailed statistics table
  */
 export function BoxplotComponent(props: BoxplotOutputData): JSX.Element | null {
-  const handleMorePress = useCallback(() => {
-    props.setIsExpanded?.(true);
-  }, [props]);
-
   /**
    * Creates table cells for a given metric and boxplot data
    *
@@ -101,78 +100,40 @@ export function BoxplotComponent(props: BoxplotOutputData): JSX.Element | null {
   };
 
   return (
-    <AutoSizer>
-      {({ height, width }) => (
-        <div
-          style={{ height: Math.max(height, 200), width }}
-          className="relative"
-        >
-          <div className="h-full w-full flex flex-col rounded-lg gap-2 shadow-secondary-1 dark:text-gray-100">
-            <div className="relative h-full py-2 flex-grow">
-              <div className="absolute left-0 top-0 h-full w-full">
-                <Boxplot {...props} />
-              </div>
-            </div>
-            <div className="footer text-xs">
-              {!props.isExpanded && (
-                <div className="flex w-full justify-end">
-                  <Button
-                    size="sm"
-                    variant="light"
-                    startContent={
-                      <Icon
-                        icon="material-symbols-light:query-stats"
-                        width="18"
-                        height="18"
-                      />
-                    }
-                    endContent={
-                      props.isExpanded && (
-                        <Icon
-                          icon="solar:alt-arrow-up-line-duotone"
-                          width="18"
-                          height="18"
-                        />
-                      )
-                    }
-                    onPress={handleMorePress}
-                  >
-                    More
-                  </Button>
-                </div>
-              )}
-              {props.isExpanded && (
-                <div className="w-full text-tiny">
-                  <Table
-                    aria-label="Box Plot Statistics"
-                    classNames={{
-                      base: 'overflow-scroll p-0 m-0 text-tiny',
-                      table: 'p-0 m-0 text-tiny',
-                      wrapper: 'p-0 pr-2',
-                      th: 'text-tiny',
-                      td: 'text-tiny text-default-500',
-                    }}
-                    isCompact={true}
-                    removeWrapper={true}
-                  >
-                    <TableHeader>
-                      <>
-                        <TableColumn key="metric"> </TableColumn>
-                        {props.variables.map((variable) => (
-                          <TableColumn key={variable}>{variable}</TableColumn>
-                        ))}
-                      </>
-                    </TableHeader>
-                    <TableBody>
-                      {generateStatsRows(props.boxplotData)}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </div>
-          </div>
+    <div className="relative h-full w-full flex flex-col rounded-lg gap-2 shadow-secondary-1 dark:text-gray-100">
+      <div className="relative h-full py-2 flex-grow">
+        <div className="h-full w-full">
+          <Boxplot {...props} />
         </div>
-      )}
-    </AutoSizer>
+      </div>
+      <div className="footer text-xs">
+        {props.isExpanded && (
+          <div className="w-full text-tiny">
+            <Table
+              aria-label="Box Plot Statistics"
+              classNames={{
+                base: 'overflow-scroll p-0 m-0 text-tiny',
+                table: 'p-0 m-0 text-tiny',
+                wrapper: 'p-0 pr-2',
+                th: 'text-tiny',
+                td: 'text-tiny text-default-500',
+              }}
+              isCompact={true}
+              removeWrapper={true}
+            >
+              <TableHeader>
+                <>
+                  <TableColumn key="metric"> </TableColumn>
+                  {props.variables.map((variable) => (
+                    <TableColumn key={variable}>{variable}</TableColumn>
+                  ))}
+                </>
+              </TableHeader>
+              <TableBody>{generateStatsRows(props.boxplotData)}</TableBody>
+            </Table>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

@@ -1,4 +1,5 @@
 import { Resizable } from 're-resizable';
+import { useState } from 'react';
 
 export function ResizablePlotContainer({
   children,
@@ -11,19 +12,25 @@ export function ResizablePlotContainer({
   defaultHeight?: number;
   handlePosition?: 'bottomRight' | 'bottomLeft' | 'topRight' | 'topLeft';
 }) {
+  const [isHovered, setIsHovered] = useState(false);
+
   return (
-    <div className="w-full mt-4 mb-8">
+    <div
+      className="mt-4 mb-2"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       <Resizable
         defaultSize={{
           width: defaultWidth ?? '100%',
-          height: defaultHeight ?? 380,
+          height: defaultHeight ?? '100%',
         }}
         minWidth={200}
         minHeight={80}
         maxHeight={800}
         enable={{ bottom: true, bottomRight: true, right: false }}
         handleComponent={{
-          [handlePosition]: (
+          [handlePosition]: isHovered ? (
             <div className="group absolute bottom-0 right-0 h-6 w-6 cursor-se-resize">
               <div className="flex h-full w-full items-center justify-center transition-colors hover:bg-gray-100/10">
                 <svg
@@ -41,7 +48,7 @@ export function ResizablePlotContainer({
                 </svg>
               </div>
             </div>
-          ),
+          ) : null,
         }}
       >
         {children}

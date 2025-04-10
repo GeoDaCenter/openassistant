@@ -19,8 +19,6 @@ import { AvatarBadge } from './avatar-badge';
 import { MessageContent } from './message-content';
 import { MessageActions } from './message-action';
 import { AttemptsNavigation, AttemptFeedback } from './message-feedback';
-// local css for markdown
-import './assistant.css';
 
 export type MessageCardProps = HTMLAttributes<HTMLDivElement> & {
   index: number;
@@ -41,6 +39,7 @@ export type MessageCardProps = HTMLAttributes<HTMLDivElement> & {
   githubIssueLink?: string;
   isMessageDraggable?: boolean;
   useMarkdown?: boolean;
+  showTools?: boolean;
 };
 
 const MessageCard = forwardRef<HTMLDivElement, MessageCardProps>(
@@ -63,6 +62,7 @@ const MessageCard = forwardRef<HTMLDivElement, MessageCardProps>(
       githubIssueLink,
       useMarkdown = true,
       isMessageDraggable = false,
+      showTools = true,
       ...props
     },
     ref
@@ -129,7 +129,7 @@ const MessageCard = forwardRef<HTMLDivElement, MessageCardProps>(
         <div className="relative flex-none">
           <AvatarBadge avatar={avatar} hasFailed={hasFailed} />
         </div>
-        <div className="flex w-full flex-col gap-4 overflow-x-auto">
+        <div className="flex w-full flex-col gap-4 overflow-x-auto relative">
           <div
             className={cn(
               'group relative w-full rounded-medium px-4 py-3',
@@ -149,10 +149,13 @@ const MessageCard = forwardRef<HTMLDivElement, MessageCardProps>(
                 components={components}
                 status={status}
                 useMarkdown={useMarkdown}
+                showTools={showTools}
               />
             </div>
             <div
-              className={`opacity-0 group-hover:opacity-100 absolute right-2 top-2 flex rounded-full shadow-small bg-content2`}
+              className={
+                'opacity-0 group-hover:opacity-100 absolute right-2 top-1 flex rounded-full shadow-small bg-content2'
+              }
             >
               {showFeedback && !hasFailed && status !== 'pending' && (
                 <MessageActions

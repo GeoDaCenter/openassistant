@@ -33,12 +33,26 @@ export type OnSelectedCallback = (
  * @param config - Optional configuration object for the boxplot.
  * @param config.theme - Visual theme for the boxplot ('light' or 'dark').
  * @param config.isDraggable - Whether the boxplot can be dragged to other containers.
+ * @param config.isExpanded - Whether the boxplot is expanded.
  */
 export type BoxplotFunctionContext = {
   getValues: GetValues;
   onSelected?: OnSelectedCallback;
-  config?: { isDraggable?: boolean; theme?: string };
+  config?: { isDraggable?: boolean; theme?: string; isExpanded?: boolean };
 };
+
+/**
+ * Check if the context is a BoxplotFunctionContext.
+ * @param context - The context to check.
+ * @returns True if the context is a BoxplotFunctionContext, false otherwise.
+ */
+export function isBoxplotFunctionContext(
+  context: unknown
+): context is BoxplotFunctionContext {
+  return (
+    typeof context === 'object' && context !== null && 'getValues' in context
+  );
+}
 
 type ValueOf<T> = T[keyof T];
 type BoxplotFunctionContextValues = ValueOf<BoxplotFunctionContext>;
@@ -115,7 +129,7 @@ export type BoxplotToolProps = {
  * To use this tool, you need to provide the implementation of the `getValues` function.
  * This function will be used to retrieve the values of the variable from the dataset.
  * Note: the values are only used to create the box plot, and are not sent to the LLM.
- * 
+ *
  * For example:
  *
  * ```ts

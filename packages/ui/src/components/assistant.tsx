@@ -59,6 +59,7 @@ export type AiAssistantProps = UseAssistantProps & {
   userMessageClassName?: string;
   githubIssueLink?: string;
   useMarkdown?: boolean;
+  showTools?: boolean;
   initialMessages?: MessageModel[];
 };
 
@@ -296,13 +297,13 @@ export function AiAssistant(props: AiAssistantProps) {
                     message.direction === 'outgoing'
                       ? props.userMessageClassName ||
                         'bg-content3 text-content3-foreground'
-                      : props.botMessageClassName || 'bg-content2'
+                      : props.botMessageClassName || 'bg-transparent'
                   }
                   showFeedback={message.direction === 'incoming'}
                   status={
                     isPrompting && i === messages.length - 1
                       ? 'pending'
-                      : message.sender === 'Error'
+                      : message.sender === 'error'
                         ? 'failed'
                         : 'success'
                   }
@@ -311,6 +312,7 @@ export function AiAssistant(props: AiAssistantProps) {
                   unselectable="on"
                   githubIssueLink={props.githubIssueLink}
                   useMarkdown={props.useMarkdown}
+                  showTools={props.showTools}
                 />
               );
             })}
