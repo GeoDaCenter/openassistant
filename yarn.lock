@@ -22,6 +22,55 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@ai-sdk/anthropic@npm:^1.2.9":
+  version: 1.2.9
+  resolution: "@ai-sdk/anthropic@npm:1.2.9"
+  dependencies:
+    "@ai-sdk/provider": "npm:1.1.2"
+    "@ai-sdk/provider-utils": "npm:2.2.6"
+  peerDependencies:
+    zod: ^3.0.0
+  checksum: 84ec43184bd2c6034644e5a5e978d759b784c135414942a94468bead8aed978b38fe0b35e4e3ba1facf9deec3112af9795b5c6008aed64bdd3bcb09d912eddf2
+  languageName: node
+  linkType: hard
+
+"@ai-sdk/deepseek@npm:^0.2.9":
+  version: 0.2.9
+  resolution: "@ai-sdk/deepseek@npm:0.2.9"
+  dependencies:
+    "@ai-sdk/openai-compatible": "npm:0.2.9"
+    "@ai-sdk/provider": "npm:1.1.2"
+    "@ai-sdk/provider-utils": "npm:2.2.6"
+  peerDependencies:
+    zod: ^3.0.0
+  checksum: e7d0b511d6fd7a047b147610f6f034e837f2442456b7e4140c1129c62605618d0868c8ceb202a7000e75460053b77e7bd25b33d45beb54a680c7844c8bb73d7c
+  languageName: node
+  linkType: hard
+
+"@ai-sdk/google@npm:^1.2.10":
+  version: 1.2.10
+  resolution: "@ai-sdk/google@npm:1.2.10"
+  dependencies:
+    "@ai-sdk/provider": "npm:1.1.2"
+    "@ai-sdk/provider-utils": "npm:2.2.6"
+  peerDependencies:
+    zod: ^3.0.0
+  checksum: 537473bf694bedf7de1a239d392fc97b1cc1799fab39d375fdd0989b1d7cef7bbe7cc4b93a320e4de9062735ffa33446e95f028fd29a911625eda7ca185a6241
+  languageName: node
+  linkType: hard
+
+"@ai-sdk/openai-compatible@npm:0.2.9":
+  version: 0.2.9
+  resolution: "@ai-sdk/openai-compatible@npm:0.2.9"
+  dependencies:
+    "@ai-sdk/provider": "npm:1.1.2"
+    "@ai-sdk/provider-utils": "npm:2.2.6"
+  peerDependencies:
+    zod: ^3.0.0
+  checksum: a12809f1f43d29d2b6c5fe78d05f96c2f6120ec66c09321930d46427655e8e86a74d664838349ce3ed940e5d973bd5d8cfb9200a7d751fda88d451f23f1757f9
+  languageName: node
+  linkType: hard
+
 "@ai-sdk/openai@npm:^1.1.5":
   version: 1.3.7
   resolution: "@ai-sdk/openai@npm:1.3.7"
@@ -47,12 +96,34 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@ai-sdk/provider-utils@npm:2.2.6":
+  version: 2.2.6
+  resolution: "@ai-sdk/provider-utils@npm:2.2.6"
+  dependencies:
+    "@ai-sdk/provider": "npm:1.1.2"
+    nanoid: "npm:^3.3.8"
+    secure-json-parse: "npm:^2.7.0"
+  peerDependencies:
+    zod: ^3.23.8
+  checksum: 2bf53d6c49e5e721a15ab36746edfb0839dba104d32efd5a8f336276097c2a56cbbefa1dc164f307f495a659fa33256bdd0465462b8d172510c80d1123552c47
+  languageName: node
+  linkType: hard
+
 "@ai-sdk/provider@npm:1.1.0, @ai-sdk/provider@npm:^1.0.0":
   version: 1.1.0
   resolution: "@ai-sdk/provider@npm:1.1.0"
   dependencies:
     json-schema: "npm:^0.4.0"
   checksum: 0fb9861c4ebb2d350f9194557c48995a1ffa96df4a3d33682075184cbe1148ea8687b324011492a99d35faa8fe2616a1c2595b41ab104fcc93b91f96ee220467
+  languageName: node
+  linkType: hard
+
+"@ai-sdk/provider@npm:1.1.2, @ai-sdk/provider@npm:^1.1.2":
+  version: 1.1.2
+  resolution: "@ai-sdk/provider@npm:1.1.2"
+  dependencies:
+    json-schema: "npm:^0.4.0"
+  checksum: 1e5b6e695f834ab375c25b750292f60e378c17cf047a2cd62e8829c6e4bbe1582331afa8606333b5b6a5fe77ff434e5d9389a381ace4a58b12da0297a36bb626
   languageName: node
   linkType: hard
 
@@ -84,6 +155,19 @@ __metadata:
   peerDependencies:
     zod: ^3.23.8
   checksum: ebda36f210e0fd36249aefb44669d06bac655cf6b40facd45bfb06e37d8a368a9591ed476d88e8340ff9e2fff6bae230e4d731fc9f37586a039f301669c9433d
+  languageName: node
+  linkType: hard
+
+"@ai-sdk/xai@npm:^1.2.11":
+  version: 1.2.11
+  resolution: "@ai-sdk/xai@npm:1.2.11"
+  dependencies:
+    "@ai-sdk/openai-compatible": "npm:0.2.9"
+    "@ai-sdk/provider": "npm:1.1.2"
+    "@ai-sdk/provider-utils": "npm:2.2.6"
+  peerDependencies:
+    zod: ^3.0.0
+  checksum: 821258e7953d1a82993456f36e9250ecb6a10403c70549b57055e6933bb76a09203436b3fad7814ad3ba9b124e4e60cdb0abd4cd7a513b6f991004f9c2058f2e
   languageName: node
   linkType: hard
 
@@ -2718,6 +2802,33 @@ __metadata:
     typescript:
       optional: true
   checksum: b9f128d5f07f2837d62da9467efac35b03514e39b0e3f21c93f6459a7e227b3ef0d9c7168b853ecb2701a229898221f2dc3cdb2705a5d50d7c01f2742e4a56fe
+  languageName: node
+  linkType: hard
+
+"@geoda/core@npm:^0.0.6":
+  version: 0.0.6
+  resolution: "@geoda/core@npm:0.0.6"
+  dependencies:
+    "@loaders.gl/schema": "npm:^4.1.0-alpha.4"
+    geojson: "npm:^0.5.0"
+  checksum: 5d35ff9cb93f88a1153e22046c046146093edad84709f82a3bc0d94bfaa37203229789f0f2f1156398229c466e2d8142fbf35dcf8a378253e2c8b7e5603df873
+  languageName: node
+  linkType: hard
+
+"@geoda/lisa@npm:^0.0.6":
+  version: 0.0.6
+  resolution: "@geoda/lisa@npm:0.0.6"
+  dependencies:
+    "@loaders.gl/schema": "npm:^4.1.0-alpha.4"
+    geojson: "npm:^0.5.0"
+  checksum: f6690f3eac3b3c4a94121d0ed10fd1b18c89a227970ba8b84f6316a463aab00a5ade636aca6939cdbf37247393e8dcd225bddf06d1e52b3842adf65d0ffe2fe5
+  languageName: node
+  linkType: hard
+
+"@geoda/regression@npm:^0.0.6":
+  version: 0.0.6
+  resolution: "@geoda/regression@npm:0.0.6"
+  checksum: 7f85a2d2ca57fddee95813231f39f2403cb9d909fb9be0519e96e51161c405fbe24c2f2a21c4c093a5a30f7ffb13b93fd9670d8b7e65ccbff0b6f1cf0af421d8
   languageName: node
   linkType: hard
 
@@ -7292,10 +7403,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@openassistant/geoda@workspace:packages/geoda":
+"@openassistant/geoda@workspace:*, @openassistant/geoda@workspace:packages/geoda":
   version: 0.0.0-use.local
   resolution: "@openassistant/geoda@workspace:packages/geoda"
   dependencies:
+    "@geoda/core": "npm:^0.0.6"
+    "@geoda/lisa": "npm:^0.0.6"
+    "@geoda/regression": "npm:^0.0.6"
     "@loaders.gl/core": "npm:^4.3.3"
     "@loaders.gl/schema": "npm:^4.3.3"
     "@nextui-org/react": "npm:^2.6.8"
@@ -7303,7 +7417,6 @@ __metadata:
     "@openassistant/core": "workspace:*"
     "@openassistant/echarts": "workspace:*"
     framer-motion: "npm:^11.15.0"
-    geoda-wasm: "npm:^0.0.5"
     tailwindcss: "npm:^3.4.17"
   peerDependencies:
     react: ">=18.2"
@@ -11384,7 +11497,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react-dom@npm:^18.0.11, @types/react-dom@npm:^18.3.1":
+"@types/react-dom@npm:^18.0.11, @types/react-dom@npm:^18.2.0, @types/react-dom@npm:^18.3.1":
   version: 18.3.6
   resolution: "@types/react-dom@npm:18.3.6"
   peerDependencies:
@@ -11481,7 +11594,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react@npm:16 || 17 || 18, @types/react@npm:^18.0.28, @types/react@npm:^18.3.1":
+"@types/react@npm:16 || 17 || 18, @types/react@npm:^18.0.28, @types/react@npm:^18.2.0, @types/react@npm:^18.3.1":
   version: 18.3.20
   resolution: "@types/react@npm:18.3.20"
   dependencies:
@@ -18430,15 +18543,24 @@ __metadata:
   languageName: node
   linkType: hard
 
-"geoda-wasm@npm:^0.0.5":
-  version: 0.0.5
-  resolution: "geoda-wasm@npm:0.0.5"
+"geoda_tools@workspace:examples/geoda_tools":
+  version: 0.0.0-use.local
+  resolution: "geoda_tools@workspace:examples/geoda_tools"
   dependencies:
-    "@loaders.gl/schema": "npm:^4.1.0-alpha.4"
-    geojson: "npm:^0.5.0"
-  checksum: 72385ef9136486da4c02d42f796009cf59d17df3761b8e0730139222ff6171fd8889d1e52880f7315f5002a56fcc3389df517db2ac7a2e0768bd0ab87517141d
-  languageName: node
-  linkType: hard
+    "@openassistant/geoda": "workspace:*"
+    "@openassistant/ui": "workspace:*"
+    "@types/react": "npm:^18.2.0"
+    "@types/react-dom": "npm:^18.2.0"
+    autoprefixer: "npm:^10.4.20"
+    esbuild: "npm:^0.24.2"
+    esbuild-plugin-polyfill-node: "npm:^0.3.0"
+    esbuild-plugin-tailwindcss: "npm:^1.2.1"
+    postcss: "npm:^8.4.49"
+    react: "npm:^18.2.0"
+    react-dom: "npm:^18.2.0"
+    tailwind: "npm:^4.0.0"
+  languageName: unknown
+  linkType: soft
 
 "geojson-types@npm:^2.0.1":
   version: 2.0.1
@@ -25352,6 +25474,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "playground@workspace:playground"
   dependencies:
+    "@ai-sdk/anthropic": "npm:^1.2.9"
+    "@ai-sdk/deepseek": "npm:^0.2.9"
+    "@ai-sdk/google": "npm:^1.2.10"
+    "@ai-sdk/provider": "npm:^1.1.2"
+    "@ai-sdk/xai": "npm:^1.2.11"
     "@duckdb/duckdb-wasm": "npm:^1.29.0"
     "@iconify/react": "npm:^5.1.0"
     "@lexical/react": "npm:^0.23.1"

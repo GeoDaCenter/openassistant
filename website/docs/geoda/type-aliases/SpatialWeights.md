@@ -2,7 +2,7 @@
 
 > **SpatialWeights**: `object`
 
-Defined in: [packages/geoda/src/moran-scatterplot/callback-function.ts:42](https://github.com/GeoDaCenter/openassistant/blob/ae6e39c15b60e7a98a21d90a5bbeff5dc44c1295/packages/geoda/src/moran-scatterplot/callback-function.ts#L42)
+Defined in: [packages/geoda/src/moran-scatterplot/callback-function.ts:26](https://github.com/GeoDaCenter/openassistant/blob/994a31d776db171047aa7cd650eb798b5317f644/packages/geoda/src/moran-scatterplot/callback-function.ts#L26)
 
 ## Type declaration
 

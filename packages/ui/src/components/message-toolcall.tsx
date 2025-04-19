@@ -41,7 +41,9 @@ export const MarkdownContent = ({
       <Markdown
         remarkPlugins={[remarkGfm]}
         components={{
-          ul: ({ children }) => <ul className="list-disc ml-5">{children}</ul>,
+          ul: ({ children }) => (
+            <ul className="-mt-6 list-disc ml-5">{children}</ul>
+          ),
           ol: ({ children }) => (
             <ol className="list-decimal ml-8 -mt-5">{children}</ol>
           ),
@@ -50,7 +52,7 @@ export const MarkdownContent = ({
             // Added !mt-0 to force margin-top to 0
             // Used -translate-y-5 to move the paragraph up by 1.25rem to align with the marker
             // Added negative margin bottom to compensate for the translated paragraph
-            <li className="my-0 h-fit min-h-0 [&>p]:-mb-6 [&>p]:!mt-0 [&>p]:-translate-y-5 [&>p]:h-fit [&>p]:leading-5">
+            <li className="my-0 h-fit -mb-2 min-h-0 [&>p]:-mb-6 [&>p]:!mt-0 [&>p]:-translate-y-5 [&>p]:h-fit [&>p]:leading-5">
               {children}
             </li>
           ),
@@ -146,6 +148,8 @@ export function ToolCallComponent({
   )?.component;
 
   const llmResultTable = llmResult as Record<string, unknown> | undefined;
+  const toolSuccess = Boolean(llmResultTable?.success);
+
   const tableItems = llmResultTable
     ? Object.entries(llmResultTable).map(([key, value]) => ({
         key,
@@ -161,7 +165,7 @@ export function ToolCallComponent({
           <Accordion
             variant="light"
             isCompact={true}
-            className="pt-6 text-tiny"
+            className="pt-0 text-tiny"
             itemClasses={{
               title: 'text-tiny',
               content: 'text-tiny',
@@ -224,7 +228,7 @@ export function ToolCallComponent({
           </Accordion>
         </CardBody>
       </Card>
-      {Component && (
+      {Component && isCompleted && toolSuccess && (
         <ToolCallErrorBoundary>
           {typeof Component === 'function' ? (
             <Component {...(additionalData as Record<string, unknown>)} />

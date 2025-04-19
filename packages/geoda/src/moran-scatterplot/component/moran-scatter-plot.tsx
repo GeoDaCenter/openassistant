@@ -1,7 +1,6 @@
-import { WeightsMeta } from 'geoda-wasm';
+import { WeightsMeta } from '@geoda/core';
 import { useMemo, useRef, useState } from 'react';
 import ReactEChartsCore from 'echarts-for-react';
-import AutoSizer from 'react-virtualized-auto-sizer';
 import {
   TooltipComponent,
   GridComponent,
@@ -26,7 +25,7 @@ echarts.use([
   CanvasRenderer,
   BrushComponent,
   ToolboxComponent,
-  LineChart
+  LineChart,
 ]);
 
 export type MoranScatterOutputData = {
@@ -40,9 +39,12 @@ export type MoranScatterOutputData = {
   regression: SimpleLinearRegressionResult;
   theme?: string;
   isDraggable?: boolean;
+  isExpanded?: boolean;
 };
 
-export function isMoranScatterOutputData(data: unknown): data is MoranScatterOutputData {
+export function isMoranScatterOutputData(
+  data: unknown
+): data is MoranScatterOutputData {
   return (
     typeof data === 'object' &&
     data !== null &&
@@ -135,40 +137,29 @@ export function MoranScatterComponent(props: MoranScatterOutputData) {
     }),
     [brush, props.datasetName]
   );
-  
+
   return (
-    <AutoSizer>
-      {({ height, width }) => (
-        <div style={{ height, width }}>
-          <div
-            style={{ height: '100%' }}
-            className="h-full w-full flex flex-col rounded-lg bg-default-100 pt-6 text-gray-900 shadow-secondary-1 dark:bg-gray-950 dark:text-gray-100"
-          >
-            <div className="flex-col items-start p-2">
-              <p className="text-tiny font-bold uppercase">
-                {props.variableName}
-              </p>
-              <small className="truncate text-default-500">
-                {props.variableName}
-              </small>
-            </div>
-            <div style={{ height: '100%' }} className="py-2 flex-grow">
-              <ReactEChartsCore
-                option={option}
-                notMerge={true}
-                lazyUpdate={true}
-                style={{ height: '100%', width: '100%' }}
-                ref={eChartsRef}
-                theme={props.theme || 'dark'}
-                onEvents={bindEvents}
-                onChartReady={() => {
-                  setRendered(true);
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-    </AutoSizer>
+    <div className="h-full w-full flex flex-col rounded-lg  text-gray-900 shadow-secondary-1 dark:bg-gray-950 dark:text-gray-100">
+      <div className="flex-col items-start p-2">
+        <p className="text-tiny font-bold uppercase">{props.variableName}</p>
+        <small className="truncate text-default-500">
+          {props.variableName}
+        </small>
+      </div>
+      <div style={{ height: '100%' }} className="py-2 flex-grow">
+        <ReactEChartsCore
+          option={option}
+          notMerge={true}
+          lazyUpdate={true}
+          style={{ height: '100%', width: '100%' }}
+          ref={eChartsRef}
+          theme={props.theme || 'dark'}
+          onEvents={bindEvents}
+          onChartReady={() => {
+            setRendered(true);
+          }}
+        />
+      </div>
+    </div>
   );
 }

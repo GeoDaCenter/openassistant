@@ -2,7 +2,7 @@
 
 > **SpatialCountComponentProps**: `object`
 
-Defined in: [packages/geoda/src/spatial-count/utils/spatial-count-component.tsx:14](https://github.com/GeoDaCenter/openassistant/blob/ae6e39c15b60e7a98a21d90a5bbeff5dc44c1295/packages/geoda/src/spatial-count/utils/spatial-count-component.tsx#L14)
+Defined in: [packages/geoda/src/spatial-count/component/spatial-count-component.tsx:19](https://github.com/GeoDaCenter/openassistant/blob/994a31d776db171047aa7cd650eb798b5317f644/packages/geoda/src/spatial-count/component/spatial-count-component.tsx#L19)
 
 ## Type declaration
 
@@ -17,6 +17,18 @@ Defined in: [packages/geoda/src/spatial-count/utils/spatial-count-component.tsx:
 #### Returns
 
 `void`
+
+### id?
+
+> `optional` **id**: `string`
+
+### isDraggable?
+
+> `optional` **isDraggable**: `boolean`
+
+### isExpanded?
+
+> `optional` **isExpanded**: `boolean`
 
 ### joinResult
 

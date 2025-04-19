@@ -3,16 +3,16 @@ import {
   CustomFunctionOutputProps,
   ErrorCallbackResult,
 } from '@openassistant/core';
-import { initGeoDa, spatialLag, WeightsMeta } from 'geoda-wasm';
-import { MoranScatterFunctionContext } from './definition';
+import { WeightsMeta } from '@geoda/core';
+import { spatialLag } from '@geoda/lisa';
 import { simpleLinearRegression } from '@openassistant/echarts';
 import { MoranScatterOutputData } from './component/moran-scatter-plot';
-
-type MoranScatterFunctionArgs = {
-  datasetName: string;
-  variableName: string;
-  weightsId: string;
-};
+import {
+  isMoranScatterPlotArgs,
+  isWeightsOutputData,
+  MoranScatterPlotFunctionContext,
+} from './tool';
+import { getCachedWeightsById } from 'src/weights/tool';
 
 type MoranScatterOutputResult =
   | ErrorCallbackResult
@@ -24,35 +24,15 @@ type MoranScatterOutputResult =
       details: string;
     };
 
-/**
- * Type guard of MoranScatterFunctionArgs
- */
-function isMoranScatterFunctionArgs(
-  data: unknown
-): data is MoranScatterFunctionArgs {
-  return (
-    typeof data === 'object' &&
-    data !== null &&
-    'datasetName' in data &&
-    'variableName' in data &&
-    'weightsId' in data
-  );
-}
-
 export type SpatialWeights = {
   weights: number[][];
   weightsMeta: WeightsMeta;
 };
 
-export function isWeightsOutputData(data: unknown): data is SpatialWeights {
-  return (
-    typeof data === 'object' &&
-    data !== null &&
-    'weights' in data &&
-    'weightsMeta' in data
-  );
-}
-
+/**
+ * @internal
+ * @deprecated Use {@link moranScatterPlot} tool instead
+ */
 export async function moranScatterCallbackFunction({
   functionName,
   functionArgs,
@@ -61,7 +41,7 @@ export async function moranScatterCallbackFunction({
 }: CallbackFunctionProps): Promise<
   CustomFunctionOutputProps<MoranScatterOutputResult, MoranScatterOutputData>
 > {
-  if (!isMoranScatterFunctionArgs(functionArgs)) {
+  if (!isMoranScatterPlotArgs(functionArgs)) {
     return {
       type: 'error',
       name: functionName,
@@ -98,14 +78,16 @@ export async function moranScatterCallbackFunction({
     }
   });
 
-  const { getValues, getWeights, config } =
-    functionContext as MoranScatterFunctionContext;
+  const { getValues, config } =
+    functionContext as MoranScatterPlotFunctionContext;
 
   if (!weights) {
-    // try to call getWeights to find from existing weights
-    const weightsResult = getWeights(weightsId);
-    weights = weightsResult.weights;
-    weightsMeta = weightsResult.weightsMeta;
+    // try to get weights from globalWeightsData
+    const weightsResult = getCachedWeightsById(weightsId);
+    if (weightsResult) {
+      weights = weightsResult.weights;
+      weightsMeta = weightsResult.weightsMeta;
+    }
   }
 
   if (!weights || !weightsMeta) {
@@ -136,7 +118,6 @@ export async function moranScatterCallbackFunction({
 
   try {
     // compute moran's I
-    await initGeoDa();
     const lagValues = await spatialLag(values, weights);
     const regression = simpleLinearRegression(values, lagValues);
     const slope = regression.slope;

@@ -4,63 +4,26 @@ import {
 } from '@openassistant/core';
 import { moranScatterCallbackFunction } from './callback-function';
 import { MoranScatterCallbackComponent } from './callback-component';
-import { WeightsMeta } from 'geoda-wasm';
-
-export type GetWeights = (weightsId: string) => {
-  weights: number[][];
-  weightsMeta: WeightsMeta;
-};
+import { MoranScatterPlotFunctionContext } from './tool';
 
 /**
- * Function signature for retrieving variable values from a dataset.
- *
- * :::note
- * Users should implement this function to retrieve the values of a variable from their own dataset e.g. database.
- * :::
- *
- * @param datasetName - Name of the target dataset
- * @param variableName - Name of the variable to retrieve
- * @returns Promise containing an array of numeric values
- */
-export type GetValues = (
-  datasetName: string,
-  variableName: string
-) => Promise<number[]>;
-
-/**
- * The context of the scatterplot function. The context will be used by the function calling to create the scatterplot.
- *
- * @param getValues - Get the values of two variables from the dataset. See {@link GetValues} for more details.
- * @param config - The configuration of the scatterplot.
- * @param config.isDraggable - The flag to indicate if the scatterplot is draggable.
- * @param config.theme - The theme of the scatterplot. The possible values are 'light' and 'dark'.
- */
-export type MoranScatterFunctionContext = {
-  getValues: GetValues;
-  getWeights: GetWeights;
-  config?: { isDraggable?: boolean; theme?: string };
-};
-
-/**
+ * @internal
+ * @deprecated Use {@link MoranScatterPlotFunctionContext} instead.
+ * 
  * The definition of the values of the Moran scatterplot function context.
  * It is a union of the values of {@link MoranScatterFunctionContext}: getValues
  *
  * See {@link MoranScatterFunctionContext} for more details.
  */
 export type MoranScatterFunctionContextValues =
-  MoranScatterFunctionContext[keyof MoranScatterFunctionContext];
+  MoranScatterPlotFunctionContext[keyof MoranScatterPlotFunctionContext];
 
 /**
+ * @internal
+ * @deprecated Use {@link moranScatterPlot} tool instead.
+ *
  * Define the scatterplot function for tool calling. This function can assist user to create a scatterplot using the values of two variables in the dataset.
  * The values of x and y should be retrieved using the getValues() callback function.
- *
- * User can select the points in the scatterplot, and the selections can be synced back to the original dataset using the onSelected() callback.
- * See {@link OnSelectedCallback} for more details.
- *
- * @param context - The context of the function. See {@link ScatterplotFunctionContext} for more details.
- * @param context.getValues - Get the values of two variables from the dataset. See {@link GetValues} for more details.
- * @param context.onSelected - The callback function can be used to sync the selections of the scatterplot with the original dataset. See {@link OnSelectedCallback} for more details.
- * @returns The function definition.
  */
 export function moranScatterFunctionDefinition(
   context: CustomFunctionContext<MoranScatterFunctionContextValues>

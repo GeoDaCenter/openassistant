@@ -1,10 +1,10 @@
-# Function: spatialCountFunctionDefinition()
+# Function: ~~spatialCountFunctionDefinition()~~
 
 > **spatialCountFunctionDefinition**(`context`): `RegisterFunctionCallingProps`
 
-Defined in: [packages/geoda/src/spatial-count/definition.ts:29](https://github.com/GeoDaCenter/openassistant/blob/ae6e39c15b60e7a98a21d90a5bbeff5dc44c1295/packages/geoda/src/spatial-count/definition.ts#L29)
+Defined in: [packages/geoda/src/spatial-count/definition.ts:21](https://github.com/GeoDaCenter/openassistant/blob/994a31d776db171047aa7cd650eb798b5317f644/packages/geoda/src/spatial-count/definition.ts#L21)
 
-The definition of the spatial count function
+**`Internal`**
 
 ## Parameters
 
@@ -19,3 +19,9 @@ the context for the spatial count function. See [SpatialCountFunctionContext](..
 `RegisterFunctionCallingProps`
 
 the definition of the spatial count function
+
+## Deprecated
+
+Use [spatialJoin](../variables/spatialJoin.md) tool instead
+
+The definition of the spatial count function

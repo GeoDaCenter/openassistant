@@ -9,13 +9,21 @@ import {
   Pagination,
   Button,
 } from '@nextui-org/react';
+import {
+  ExpandableContainer,
+  useDraggable,
+  generateId,
+} from '@openassistant/common';
 import '../../index.css';
 
 export type SpatialCountComponentProps = {
+  id?: string;
   joinResult: number[][];
   joinValues?: Record<string, number[]>;
   actionButtonLabel?: string;
   actionButtonOnClick?: () => void;
+  isExpanded?: boolean;
+  isDraggable?: boolean;
 };
 
 export function SpatialCountComponent({
@@ -44,7 +52,7 @@ export function SpatialCountComponent({
       {error}
     </div>
   ) : (
-    <div className="flex flex-col gap-4 max-w-full">
+    <div className="flex flex-col max-w-full">
       <Table
         aria-label="Query Result Table"
         bottomContent={
@@ -63,7 +71,7 @@ export function SpatialCountComponent({
           </div>
         }
         classNames={{
-          wrapper: 'max-h-[440px] max-w-full overflow-x-auto rounded-none',
+          wrapper: 'max-h-[440px] max-w-full overflow-x-auto rounded-none gap-0',
           base: 'overflow-scroll p-0 m-0 text-tiny',
           table: 'p-0 m-0 text-tiny',
           th: 'text-tiny',
@@ -99,5 +107,33 @@ export function SpatialCountComponent({
         </div>
       )}
     </div>
+  );
+}
+
+export function SpatialJoinToolComponent(props: SpatialCountComponentProps) {
+  const [isExpanded, setIsExpanded] = useState(props.isExpanded);
+
+  const onDragStart = useDraggable({
+    id: props.id || generateId(),
+    type: 'spatial-join',
+    data: props,
+  });
+
+  const onExpanded = (flag: boolean) => {
+    setIsExpanded(flag);
+  };
+
+  const height = props.joinResult.length * 30 + 90;
+
+  return (
+    <ExpandableContainer
+      defaultWidth={isExpanded ? 600 : undefined}
+      defaultHeight={isExpanded ? 800 : height}
+      draggable={props.isDraggable || false}
+      onDragStart={onDragStart}
+      onExpanded={onExpanded}
+    >
+      <SpatialCountComponent {...props} />
+    </ExpandableContainer>
   );
 }

@@ -1,7 +1,10 @@
-import { ExpandableContainer, generateId } from '@openassistant/common';
+import {
+  ExpandableContainer,
+  generateId,
+  useDraggable,
+} from '@openassistant/common';
 
 import { useState } from 'react';
-import { useDraggable } from '../../hooks/useDraggable';
 import { HistogramOutputData, HistogramComponent } from './histogram-plot';
 
 export function HistogramComponentContainer(
