@@ -1,8 +1,8 @@
 import { tool } from '@openassistant/utils';
 import { z } from 'zod';
 import { spatialDissolve } from '@geoda/core';
-import { generateId, isSpatialToolContext } from '../utils';
-import { cacheData } from '../utils';
+import { isSpatialToolContext } from '../utils';
+import { cacheData, generateId } from '@openassistant/utils';
 import { SpatialToolContext } from '../types';
 import { Feature, Geometry } from 'geojson';
 
@@ -130,7 +130,7 @@ export const dissolve = tool<
     };
   },
   context: {
-    getGeometries: () => null,
+    getGeometries: async () => null,
   },
 });
 

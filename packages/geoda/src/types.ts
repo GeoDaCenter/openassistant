@@ -9,7 +9,7 @@ import { WeightsMeta, SpatialGeometry } from '@geoda/core';
 export type GetValues = (
   datasetName: string,
   variableName: string
-) => Promise<number[]>;
+) => Promise<unknown[]>;
 
 export type WeightsProps = {
   datasetId: string;
@@ -25,7 +25,7 @@ export type WeightsProps = {
  */
 export type GetGeometries = (
   datasetName: string
-) => Promise<SpatialGeometry> | null;
+) => Promise<SpatialGeometry | null>;
 
 export type SpatialToolContext = {
   getGeometries?: GetGeometries;

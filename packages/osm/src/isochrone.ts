@@ -1,6 +1,5 @@
-import { tool } from '@openassistant/utils';
 import { z } from 'zod';
-import { generateId, cacheData } from './utils';
+import { generateId, tool } from '@openassistant/utils';
 import { FeatureCollection } from 'geojson';
 import { isOsmToolContext, OsmToolContext } from './register-tools';
 
@@ -40,14 +39,13 @@ export type IsochroneFunctionArgs = z.ZodObject<{
 
 export type IsochroneLlmResult = {
   success: boolean;
-  result?: {
-    datasetName: string;
-    polygons: Array<{
-      time: number;
-      distance: number;
-      geometry: GeoJSON.Polygon;
-    }>;
-    origin: GeoJSON.FeatureCollection;
+  datasetName?: string;
+  timeLimit?: number;
+  distanceLimit?: number;
+  result?: string;
+  origin?: {
+    longitude: number;
+    latitude: number;
   };
   error?: string;
 };
@@ -57,14 +55,10 @@ export type IsochroneAdditionalData = {
     longitude: number;
     latitude: number;
   };
-  isochrone: {
-    polygons: Array<{
-      time: number;
-      distance: number;
-      geometry: GeoJSON.Polygon;
-    }>;
-  };
-  cacheId: string;
+  timeLimit?: number;
+  distanceLimit?: number;
+  datasetName: string;
+  [datasetName: string]: unknown;
 };
 
 export type ExecuteIsochroneResult = {
@@ -79,23 +73,36 @@ export type ExecuteIsochroneResult = {
  * from a starting point using Mapbox's Isochrone API. It supports different transportation modes
  * and can return either polygons or linestrings.
  *
+ * :::tip
+ * If you don't know the coordinates of the origin point, you can use the geocoding tool to get it.
+ * :::
+ *
  * Example user prompts:
  * - "Show me all areas reachable within 15 minutes of Times Square by car"
  * - "What areas can I reach within 2km of the Eiffel Tower on foot?"
  * - "Generate isochrones for a 30-minute cycling radius from Central Park"
  *
- * Example code:
+ * @example
  * ```typescript
- * import { getVercelAiTool } from "@openassistant/osm";
+ * import { getOsmTool, OsmToolNames } from "@openassistant/osm";
  *
- * const isochroneTool = getVercelAiTool('isochrone');
- * 
- * generateText({
- *   model: 'gpt-4o-mini',
+ * const geocodingTool = getOsmTool(OsmToolNames.geocoding);
+ * const isochroneTool = getOsmTool(OsmToolNames.isochrone, {
+ *   toolContext: {
+ *     getMapboxToken: () => process.env.MAPBOX_TOKEN!,
+ *   },
+ * });
+ *
+ * streamText({
+ *   model: openai('gpt-4o'),
  *   prompt: 'What areas can I reach within 2km of the Eiffel Tower on foot?',
- *   tools: {isochrone: isochroneTool},
+ *   tools: {
+ *     isochrone: isochroneTool,
+ *   },
  * });
  * ```
+ *
+ * For a more complete example, see the [OSM Tools Example using Next.js + Vercel AI SDK](https://github.com/openassistant/openassistant/tree/main/examples/vercel_osm_example).
  */
 export const isochrone = tool<
   IsochroneFunctionArgs,
@@ -143,8 +150,9 @@ export const isochrone = tool<
       } = args;
       const { longitude: originLon, latitude: originLat } = origin;
 
-      // Generate cache key
-      const cacheKey = generateId();
+      // Generate output dataset name
+      const outputDatasetName = `isochrone_${generateId()}`;
+
       if (!options?.context || !isOsmToolContext(options.context)) {
         throw new Error(
           'Context is required and must implement OsmToolContext'
@@ -198,47 +206,31 @@ export const isochrone = tool<
         })),
       };
 
-      // Cache the isochrone data
-      cacheData(cacheKey, isochroneGeojson);
-
       return {
         llmResult: {
           success: true,
-          result: {
-            datasetName: cacheKey,
-            polygons: isochroneData.polygons,
-            origin: {
-              type: 'FeatureCollection',
-              features: [
-                {
-                  type: 'Feature',
-                  geometry: {
-                    type: 'Point',
-                    coordinates: [originLon, originLat],
-                  },
-                  properties: {},
-                },
-              ],
-            },
-          },
+          datasetName: outputDatasetName,
+          origin: { longitude: originLon, latitude: originLat },
+          ...(timeLimit && { timeLimit }),
+          ...(distanceLimit && { distanceLimit }),
+          result: `Successfully generated isochrone polygons for the origin point. The GeoJSON data has been saved with the dataset name: ${outputDatasetName}.`,
         },
         additionalData: {
           origin: origin,
-          isochrone: isochroneData,
-          cacheId: cacheKey,
+          ...(timeLimit && { timeLimit }),
+          ...(distanceLimit && { distanceLimit }),
+          datasetName: outputDatasetName,
+          [outputDatasetName]: isochroneGeojson,
         },
       };
     } catch (error) {
       clearTimeout(timeoutId);
-      if (error instanceof Error && error.name === 'AbortError') {
-        return {
-          llmResult: {
-            success: false,
-            error: 'Isochrone request timeout',
-          },
-        };
-      }
-      throw error;
+      return {
+        llmResult: {
+          success: false,
+          error: `Failed to generate isochrone polygons: ${error}`,
+        },
+      };
     }
   },
   context: {

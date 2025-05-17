@@ -59,39 +59,45 @@ export type DataClassifyFunctionContext = {
 /**
  * The data classify tool is used to classify the data into k bins or classes.
  *
- * The classification method can be one of the following types: quantile, natural breaks, equal interval, percentile, box, standard deviation, unique values.
+ * The classification method can be one of the following types:
+ * - quantile
+ * - natural breaks
+ * - equal interval
+ * - percentile
+ * - box
+ * - standard deviation
+ * - unique values.
  *
- * When user prompts e.g. *can you classify the data of population into 5 classes?*
+ * **Example user prompts:**
+ * - "Can you classify the data of population into 5 classes?"
  *
- * 1. The LLM will execute the callback function of dataClassifyFunctionDefinition, and apply data classification using the data retrived from `getValues` function.
- * 2. The result will be an array of break points, which can be used to classify the data into k bins or classes.
- * 3. The LLM will respond with the break points to the user.
- *
- * ### For example
- * ```
- * User: can you classify the data of population into 5 classes?
- * LLM:  Yes, I've used the quantile method to classify the data of population into 5 classes. The break points are [10000, 20000, 30000, 40000, 50000].
- * ```
- *
- * ### Code example
+ * @example
  * ```typescript
- * import { getVercelAiTool } from '@openassistant/geoda';
- * import { generateText } from 'ai';
+ * import { getGeoDaTool, GeoDaToolNames } from "@openassistant/geoda";
  *
- * const toolContext = {
- *   getValues: async (datasetName: string, variableName: string) => {
- *     return SAMPLE_DATASETS[datasetName].map((item) => item[variableName]);
+ * const classifyTool = getGeoDaTool(GeoDaToolNames.dataClassify, {
+ *   toolContext: {
+ *     getValues: async (datasetName: string, variableName: string) => {
+ *       return SAMPLE_DATASETS[datasetName].map((item) => item[variableName]);
+ *     },
  *   },
- * };
+ *   onToolCompleted: (toolCallId, additionalData) => {
+ *     console.log(toolCallId, additionalData);
+ *   },
+ *   isExecutable: true,
+ * });
  *
- * const classifyTool = getVercelAiTool('dataClassify', toolContext, onToolCompleted);
  *
- * generateText({
+ * const result = await generateText({
  *   model: openai('gpt-4o-mini', { apiKey: key }),
  *   prompt: 'Can you classify the data of population into 5 classes?',
  *   tools: {dataClassify: classifyTool},
  * });
+ *
+ * console.log(result);
  * ```
+ *
+ * For a more complete example, see the [Geoda Tools Example using Next.js + Vercel AI SDK](https://github.com/openassistant/openassistant/tree/main/examples/vercel_geoda_example).
  */
 export const dataClassify = tool<
   DataClassifyFunctionArgs,
@@ -224,32 +230,38 @@ export async function runDataClassify({
   try {
     const values = await getValues(datasetName, variableName);
 
-    let breaks;
+    console.log('🔍 values', values);
 
+    let breaks;
+    let uniqueValues;
     switch (method) {
       case 'quantile':
-        breaks = await quantileBreaks(k, values);
+        breaks = await quantileBreaks(k, values as number[]);
         break;
       case 'natural breaks':
-        breaks = await naturalBreaks(k, values);
+        breaks = await naturalBreaks(k, values as number[]);
         break;
       case 'equal interval':
-        breaks = await equalIntervalBreaks(k, values);
+        breaks = await equalIntervalBreaks(k, values as number[]);
         break;
       case 'percentile':
-        breaks = await percentileBreaks(values);
+        breaks = await percentileBreaks(values as number[]);
         break;
       case 'box':
         breaks =
           hinge === 1.5
-            ? await hinge15Breaks(values)
-            : await hinge30Breaks(values);
+            ? await hinge15Breaks(values as number[])
+            : await hinge30Breaks(values as number[]);
         break;
       case 'standard deviation':
-        breaks = await standardDeviationBreaks(values);
+        breaks = await standardDeviationBreaks(values as number[]);
+        break;
+      case 'unique values':
+        // get unique values
+        uniqueValues = [...new Set(values)];
         break;
       default:
-        breaks = await quantileBreaks(k, values);
+        breaks = await quantileBreaks(k, values as number[]);
         break;
     }
 
@@ -259,8 +271,10 @@ export async function runDataClassify({
       method,
       k,
       ...(hinge && { hinge }),
-      breaks,
+      ...(breaks && { breaks }),
+      ...(uniqueValues && { uniqueValues }),
     };
+
     return {
       llmResult: {
         success: true,

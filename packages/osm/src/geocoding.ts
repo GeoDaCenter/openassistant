@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { tool } from '@openassistant/utils';
+import { tool, generateId } from '@openassistant/utils';
 
 export type GeocodingFunctionArgs = z.ZodObject<{
   address: z.ZodString;
@@ -7,37 +7,44 @@ export type GeocodingFunctionArgs = z.ZodObject<{
 
 export type GeocodingLlmResult = {
   success: boolean;
-  result?: GeoJSON.FeatureCollection;
+  datasetName?: string;
+  geojson?: GeoJSON.FeatureCollection;
+  result?: string;
   error?: string;
 };
 
 export type GeocodingAdditionalData = {
   address: string;
-  geojson: GeoJSON.FeatureCollection;
+  datasetName: string;
+  [datasetName: string]: unknown;
 };
 
 /**
  * Geocoding Tool
- * 
+ *
  * This tool converts addresses into geographic coordinates (latitude and longitude) using OpenStreetMap's Nominatim service.
- * 
+ *
  * Example user prompts:
  * - "Find the coordinates for 123 Main Street, New York"
  * - "What are the coordinates of the Eiffel Tower?"
  * - "Get the location of Central Park"
- * 
- * Example code:
- * ```typescript
- * import { getVercelAiTool } from "@openassistant/osm";
  *
- * const geocodingTool = getVercelAiTool('geocoding');
- * 
- * generateText({
- *   model: 'gpt-4o-mini',
+ * @example
+ * ```typescript
+ * import { getOsmTool, OsmToolNames } from "@openassistant/osm";
+ *
+ * const geocodingTool = getOsmTool(OsmToolNames.geocoding);
+ *
+ * streamText({
+ *   model: openai('gpt-4o'),
  *   prompt: 'What are the coordinates of the Eiffel Tower?',
- *   tools: {geocoding: geocodingTool},
+ *   tools: {
+ *     geocoding: geocodingTool,
+ *   },
  * });
  * ```
+ *
+ * For a more complete example, see the [OSM Tools Example using Next.js + Vercel AI SDK](https://github.com/openassistant/openassistant/tree/main/examples/vercel_osm_example).
  */
 export const geocoding = tool<
   GeocodingFunctionArgs,
@@ -45,11 +52,14 @@ export const geocoding = tool<
   GeocodingAdditionalData,
   GeocodingToolContext
 >({
-  description: 'Geocode an address to get the latitude and longitude of the address',
+  description:
+    'Geocode an address to get the latitude and longitude of the address',
   parameters: z.object({
     address: z.string().describe('The address to geocode'),
   }),
-  execute: async (args): Promise<{
+  execute: async (
+    args
+  ): Promise<{
     llmResult: GeocodingLlmResult;
     additionalData?: GeocodingAdditionalData;
   }> => {
@@ -76,14 +86,19 @@ export const geocoding = tool<
         ],
       };
 
+      const outputDatasetName = `geocoding_${generateId()}`;
+
       return {
         llmResult: {
           success: true,
-          result: geojson,
+          datasetName: outputDatasetName,
+          geojson,
+          result: `Successfully geocoded address: ${address}. The GeoJSON data has been cached with the dataset name: ${outputDatasetName}.`,
         },
         additionalData: {
           address,
-          geojson,
+          datasetName: outputDatasetName,
+          [outputDatasetName]: geojson,
         },
       };
     } catch (error) {

@@ -3,7 +3,7 @@ import { SpatialToolContext } from './types';
 
 import { dataClassify } from './data-classify/tool';
 import { lisa } from './lisa/tool';
-import { globalMoran } from './moran-scatterplot/tool';
+import { globalMoran } from './global-moran/tool';
 import { spatialRegression } from './regression/tool';
 import { spatialJoin } from './spatial_join/tool';
 import { spatialFilter } from './spatial_join/spatial-filter';
@@ -14,6 +14,23 @@ import { centroid } from './spatial_ops/centroid';
 import { dissolve } from './spatial_ops/dissolve';
 import { length } from './spatial_ops/length';
 import { perimeter } from './spatial_ops/perimeter';
+
+// export the enum of tool names, so users can use it to check if a tool is available
+export enum GeoDaToolNames {
+  dataClassify = 'dataClassify',
+  lisa = 'lisa',
+  globalMoran = 'globalMoran',
+  spatialRegression = 'spatialRegression',
+  spatialJoin = 'spatialJoin',
+  spatialFilter = 'spatialFilter',
+  spatialWeights = 'spatialWeights',
+  area = 'area',
+  buffer = 'buffer',
+  centroid = 'centroid',
+  dissolve = 'dissolve',
+  length = 'length',
+  perimeter = 'perimeter',
+}
 
 export function registerTools() {
   return {
@@ -33,24 +50,50 @@ export function registerTools() {
   };
 }
 
-export function getVercelAiTool(
+/**
+ * Get a single GeoDa tool.
+ *
+ */
+export function getGeoDaTool(
   toolName: string,
-  toolContext: SpatialToolContext,
-  onToolCompleted: OnToolCompleted
+  options?: {
+    toolContext?: SpatialToolContext;
+    onToolCompleted?: OnToolCompleted;
+    isExecutable?: boolean;
+  }
 ) {
   const tool = registerTools()[toolName];
   if (!tool) {
     throw new Error(`Tool "${toolName}" not found`);
   }
-  return getTool(tool, toolContext, onToolCompleted);
+  return getTool({
+    tool,
+    options: {
+      ...options,
+      isExecutable: options?.isExecutable ?? true,
+    },
+  });
 }
 
-export function getVercelAiTools(
+export function getGeoDaTools(
   toolContext: SpatialToolContext,
-  onToolCompleted: OnToolCompleted
+  onToolCompleted: OnToolCompleted,
+  isExecutable: boolean = true
 ) {
   const tools = registerTools();
-  return Object.keys(tools).map((key) => {
-    return getVercelAiTool(key, toolContext, onToolCompleted);
-  });
+
+  const toolsResult = Object.fromEntries(
+    Object.keys(tools).map((key) => {
+      return [
+        key,
+        getGeoDaTool(key, {
+          toolContext,
+          onToolCompleted,
+          isExecutable,
+        }),
+      ];
+    })
+  );
+
+  return toolsResult;
 }
