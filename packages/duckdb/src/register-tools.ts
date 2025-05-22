@@ -2,30 +2,53 @@ import { localQuery } from './tool';
 import { getTool, OnToolCompleted } from '@openassistant/utils';
 import { LocalQueryContext } from './types';
 
+// export the enum of tool names, so users can use it to check if a tool is available
+export enum DuckDBToolNames {
+  localQuery = 'localQuery',
+}
+
 export function registerTools() {
   return {
     localQuery,
   };
 }
 
-export function getVercelAiTool(
+export function getDuckDBTool(
   toolName: string,
-  toolContext: LocalQueryContext,
-  onToolCompleted: OnToolCompleted
+  options: {
+    toolContext?: LocalQueryContext;
+    onToolCompleted?: OnToolCompleted;
+    isExecutable?: boolean;
+  }
 ) {
   const tool = registerTools()[toolName];
   if (!tool) {
     throw new Error(`Tool "${toolName}" not found`);
   }
-  return getTool(tool, toolContext, onToolCompleted);
+  return getTool({
+    tool,
+    options: {
+      ...options,
+      isExecutable: options.isExecutable ?? true,
+    },
+  });
 }
 
-export function getVercelAiTools(
+export function getDuckDBTools(
   toolContext: LocalQueryContext,
-  onToolCompleted: OnToolCompleted
+  onToolCompleted: OnToolCompleted,
+  isExecutable: boolean = true
 ) {
   const tools = registerTools();
-  return Object.keys(tools).map((key) => {
-    return getVercelAiTool(key, toolContext, onToolCompleted);
-  });
+
+  const vercelAiTools = Object.fromEntries(
+    Object.keys(tools).map((key) => {
+      return [
+        key,
+        getDuckDBTool(key, { toolContext, onToolCompleted, isExecutable }),
+      ];
+    })
+  );
+
+  return vercelAiTools;
 }

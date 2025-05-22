@@ -8,8 +8,10 @@ import {
   quantileLisa,
   LocalMoranResult,
 } from '@geoda/lisa';
-import { GetValues } from '../types';
-import { generateId, getWeights } from '../utils';
+import { GetGeometries, GetValues } from '../types';
+import { getWeights } from '../utils';
+import { generateId } from '@openassistant/utils';
+import { appendJoinValuesToGeometries } from '../spatial_join/tool';
 
 export type LisaFunctionArgs = z.ZodObject<{
   method: z.ZodEnum<
@@ -29,32 +31,27 @@ export type LisaFunctionArgs = z.ZodObject<{
 
 export type LisaLlmResult = {
   success: boolean;
-  result?: {
-    mapBounds?: number[];
-    lisaMethod: string;
-    datasetId: string;
-    significanceThreshold: number;
-    variableName: string;
-    permutations: number;
-    globalMoranI?: number;
-    clusters: Array<{
-      label: string;
-      color: string;
-      numberOfObservations: number;
-    }>;
-  };
+  globalMoranI?: number;
+  clusterColorAndLabels?: Array<{
+    value: number;
+    label: string;
+    color: string;
+    numberOfObservations: number;
+  }>;
   error?: string;
   instructions?: string;
+  datasetName?: string;
 };
 
-export type LisaAdditionalData = LocalMoranResult & {
+export type LisaAdditionalData = Partial<LocalMoranResult> & {
   datasetName: string;
+  originalDatasetName: string;
   significanceThreshold: number;
-  lisaDatasetName: string;
 };
 
 export type LisaFunctionContext = {
   getValues: GetValues;
+  getGeometries?: GetGeometries;
 };
 
 /**
@@ -63,37 +60,54 @@ export type LisaFunctionContext = {
  *
  * The LISA method can be one of the following types: localMoran, localGeary, localG, localGStar, quantileLisa.
  *
- * When user prompts e.g. *can you perform a LISA analysis on the population data?*
+ * **Example user prompts:**
+ * - "Are young population clustering over the zipcode areas?"
+ * - "Can you perform a local Moran's I analysis on the population data?"
+ * - "What are the local clusters in the population data?"
+ * - "How many significant clusters are there in the population data?"
  *
- * 1. The LLM will execute the callback function of lisaFunctionDefinition, and apply LISA analysis using the data retrieved from `getValues` function.
- * 2. The result will include clusters, significance values, and other spatial statistics.
- * 3. The LLM will respond with the analysis results to the user.
+ * :::note
+ * The LISA tool should always be used with the spatialWeights tool. The LLM models know how to use the spatialWeights tool for the LISA analysis.
+ * :::
  *
- * ### For example
- * ```
- * User: can you perform a LISA analysis on the population data?
- * LLM: I've performed a Local Moran's I analysis on the population data. The results show several significant clusters...
- * ```
- *
- * ### Code example
+ * @example
  * ```typescript
- * import { getVercelAiTool } from '@openassistant/geoda';
- * import { generateText } from 'ai';
+ * import { getGeoDaTool, GeoDaToolNames } from "@openassistant/geoda";
  *
- * const toolContext = {
- *   getValues: (datasetName, variableName) => {
- *     return SAMPLE_DATASETS[datasetName].map((item) => item[variableName]);
+ * const spatialWeightsTool = getGeoDaTool(GeoDaToolNames.spatialWeights, {
+ *   toolContext: {
+ *     getGeometries: (datasetName) => {
+ *       return SAMPLE_DATASETS[datasetName].map((item) => item.geometry);
+ *     },
  *   },
- * };
- *
- * const lisaTool = getVercelAiTool('lisa', toolContext, onToolCompleted);
- *
- * generateText({
- *   model: openai('gpt-4o-mini', { apiKey: key }),
- *   prompt: 'Can you perform a LISA analysis on the population data?',
- *   tools: {lisa: lisaTool},
+ *   onToolCompleted: (toolCallId, additionalData) => {
+ *     console.log(toolCallId, additionalData);
+ *   },
+ *   isExecutable: true,
  * });
+ *
+ * const lisaTool = getGeoDaTool(GeoDaToolNames.lisa, {
+ *   toolContext: {
+ *     getValues: (datasetName, variableName) => {
+ *       return SAMPLE_DATASETS[datasetName].map((item) => item[variableName]);
+ *     },
+ *   },
+ *   onToolCompleted: (toolCallId, additionalData) => {
+ *     console.log(toolCallId, additionalData);
+ *   },
+ *   isExecutable: true,
+ * });
+ *
+ * const result = await generateText({
+ *   model: openai('gpt-4o'),
+ *   prompt: 'Can you perform a local Moran analysis on the population data?',
+ *   tools: {lisa: lisaTool, spatialWeights: spatialWeightsTool},
+ * });
+ *
+ * console.log(result);
  * ```
+ *
+ * For a more complete example, see the [Geoda Tools Example using Next.js + Vercel AI SDK](https://github.com/openassistant/openassistant/tree/main/examples/vercel_geoda_example).
  */
 export const lisa = tool<
   LisaFunctionArgs,
@@ -220,7 +234,7 @@ async function executeLisa(
       quantile,
       mapBounds,
     } = args;
-    const { getValues } = options.context;
+    const { getValues, getGeometries } = options.context;
 
     // Get weights if needed
     const { weights } = getWeights(weightsID, options.previousExecutionOutput);
@@ -265,9 +279,10 @@ async function executeLisa(
         lm.lisaValues.reduce((a, b) => a + b, 0) / lm.lisaValues.length;
     }
 
-    // get meta data for each cluster
-    const metaDataOfClusters = lm.labels.map((label, i) => {
+    // color and label for each cluster
+    const clusterColorAndLabels = lm.labels.map((label, i) => {
       return {
+        value: i,
         label,
         color: lm.colors[i],
         numberOfObservations: lm.clusters.filter((c) => c === i).length,
@@ -275,33 +290,54 @@ async function executeLisa(
     });
 
     // create a lisa dataset name
-    const lisaDatasetName = `${datasetName}_${method}_${variableName}_${generateId()}`;
+    const lisaDatasetName = `${method}_${generateId()}`;
+    let lisaGeoJson: GeoJSON.FeatureCollection | null = null;
 
-    const result = {
-      lisaMethod: method,
-      datasetId: datasetName,
+    const additionalData: LisaAdditionalData = {
+      originalDatasetName: datasetName,
       significanceThreshold,
-      variableName,
-      permutations: permutation,
-      clusters: metaDataOfClusters,
-      ...(globalMoranI ? { globalMoranI } : {}),
+      datasetName: lisaDatasetName,
     };
+
+    // no need to create a new dataset if getGeometries() is not provided
+    if (getGeometries) {
+      // create lisa result by appending lm to geometries
+      const geometries = await getGeometries(datasetName);
+      // create Record<string, number[]> from lm
+      const featureValues = {
+        [variableName]: values,
+        lisa: lm.lisaValues,
+        sigCategories: lm.sigCategories,
+        clusters: lm.clusters,
+        pValues: lm.pValues,
+        lagValues: lm.lagValues,
+        nn: lm.nn,
+      };
+      lisaGeoJson = appendJoinValuesToGeometries(
+        geometries,
+        featureValues
+      ) as GeoJSON.FeatureCollection;
+      // append lisaGeoJson to additionalData
+      additionalData[lisaDatasetName] = lisaGeoJson;
+    }
 
     return {
       llmResult: {
         success: true,
         ...(mapBounds ? { mapBounds } : {}),
-        result,
-        instructions: `Important: When performing LISA analysis, visualization is handled manually. Do not ask about visualization - the map should be created manually after the analysis.`,
+        ...(globalMoranI ? { globalMoranI } : {}),
+        datasetName: lisaDatasetName,
+        clusterColorAndLabels,
+        instructions: `When creating a unique value map for LISA analysis:
+- Please use 'clusters' as the color field
+- Please use the colors from result.clusters.colors
+IMPORTANT: please use dataClassify tool to get unique values for the color field
+`,
       },
-      additionalData: {
-        ...lm,
-        datasetName,
-        significanceThreshold,
-        lisaDatasetName,
-      },
+      additionalData,
     };
   } catch (error) {
+    console.error('Error in lisa tool', error);
     return {
       llmResult: {
         success: false,

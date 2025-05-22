@@ -1,6 +1,11 @@
-import { tool } from '@openassistant/utils';
 import { z } from 'zod';
-import { cacheData, generateId, getCachedData } from '../utils';
+import {
+  cacheData,
+  generateId,
+  getCachedData,
+  tool,
+} from '@openassistant/utils';
+import { githubRateLimiter } from '../utils/rateLimiter';
 
 export type GetUsStateGeojsonFunctionArgs = z.ZodObject<{
   stateNames: z.ZodArray<z.ZodString>;
@@ -8,15 +13,15 @@ export type GetUsStateGeojsonFunctionArgs = z.ZodObject<{
 
 export type GetUsStateGeojsonLlmResult = {
   success: boolean;
-  datasetId?: string;
+  datasetName?: string;
   result?: string;
   error?: string;
 };
 
 export type GetUsStateGeojsonAdditionalData = {
   stateNames: string[];
-  datasetId: string;
-  geojson: GeoJSON.FeatureCollection;
+  datasetName: string;
+  [datasetName: string]: unknown;
 };
 
 export type ExecuteGetUsStateGeojsonResult = {
@@ -24,30 +29,41 @@ export type ExecuteGetUsStateGeojsonResult = {
   additionalData?: GetUsStateGeojsonAdditionalData;
 };
 
-// Add delay function to prevent rate limiting
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
 /**
- * Get US State GeoJSON Tool from the Github repository: https://github.com/glynnbird/usstatesgeojson
- * Note: to avoid overloading the Github API, we only fetch the GeoJSON data every 1 second.
+ * Get US State GeoJSON Tool
  *
- * This tool retrieves the GeoJSON data for a US state by its state name.
- * It returns the state's boundary geometry and properties.
+ * This tool can be used to get the GeoJSON data of one or more United States states using the Github repository: https://github.com/glynnbird/usstatesgeojson
  *
  * Example user prompts:
  * - "Get the GeoJSON for California"
  * - "Show me the boundary of New York state"
  * - "What's the geometry of Texas?"
  *
- * Example code:
- * ```typescript
- * import { getUsStateGeojson, GetUsStateGeojsonTool } from "@openassistant/osm";
+ * :::tip
+ * This tool can be mixed with other tools for more complex tasks. For example, if you have a point datasets, you can use this tool
+ * to answer questions like "What are the total revenus in the state of California?"
+ * :::
  *
- * const stateTool: GetUsStateGeojsonTool = {
- *   ...getUsStateGeojson,
- *   context: {}
- * };
+ * :::note
+ * to avoid overloading the Github API, we only fetch the GeoJSON data every 1 second.
+ * :::
+ *
+ * @example
+ * ```typescript
+ * import { getOsmTool, OsmToolNames } from "@openassistant/osm";
+ *
+ * const stateTool = getOsmTool(OsmToolNames.getUsStateGeojson);
+ *
+ * streamText({
+ *   model: openai('gpt-4o'),
+ *   prompt: 'Get the GeoJSON for California',
+ *   tools: {
+ *     state: stateTool,
+ *   },
+ * });
  * ```
+ *
+ * For a more complete example, see the [OSM Tools Example using Next.js + Vercel AI SDK](https://github.com/openassistant/openassistant/tree/main/examples/vercel_osm_example).
  */
 export const getUsStateGeojson = tool<
   GetUsStateGeojsonFunctionArgs,
@@ -73,8 +89,8 @@ export const getUsStateGeojson = tool<
       for (const stateName of stateNames) {
         let geojson = getCachedData(stateName);
         if (!geojson) {
-          // Add a delay between requests (1000ms) to avoid rate limiting
-          await delay(1000);
+          // Use the global rate limiter before making the API call
+          await githubRateLimiter.waitForNextCall();
 
           // get the Geojson file from the following url:
           // https://raw.githubusercontent.com/glynnbird/usstatesgeojson/master/arizona.geojson
@@ -96,17 +112,19 @@ export const getUsStateGeojson = tool<
         features,
       };
 
-      const datasetId = generateId();
-
-      cacheData(datasetId, finalGeojson);
+      const outputDatasetName = `states_${generateId()}`;
 
       return {
         llmResult: {
           success: true,
-          datasetId,
-          result: `Successfully fetched the GeoJSON data of the states. The GeoJSON data has been cached with the id ${datasetId}.`,
+          datasetName: outputDatasetName,
+          result: `Successfully fetched the GeoJSON data of the states. The GeoJSON data has been cached with the dataset name: ${outputDatasetName}.`,
         },
-        additionalData: { stateNames, geojson: finalGeojson, datasetId },
+        additionalData: {
+          stateNames,
+          datasetName: outputDatasetName,
+          [outputDatasetName]: finalGeojson
+        },
       };
     } catch (error) {
       return {

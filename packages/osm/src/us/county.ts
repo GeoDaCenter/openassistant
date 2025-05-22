@@ -1,6 +1,11 @@
-import { tool } from '@openassistant/utils';
 import { z } from 'zod';
-import { cacheData, generateId, getCachedData } from '../utils';
+import {
+  cacheData,
+  generateId,
+  getCachedData,
+  tool,
+} from '@openassistant/utils';
+import { githubRateLimiter } from '../utils/rateLimiter';
 
 export type GetUsCountyGeojsonFunctionArgs = z.ZodObject<{
   fipsCodes: z.ZodArray<z.ZodString>;
@@ -9,14 +14,14 @@ export type GetUsCountyGeojsonFunctionArgs = z.ZodObject<{
 export type GetUsCountyGeojsonLlmResult = {
   success: boolean;
   result?: string;
-  datasetId?: string;
+  datasetName?: string;
   error?: string;
 };
 
 export type GetUsCountyGeojsonAdditionalData = {
   fipsCodes: string[];
-  geojson: GeoJSON.FeatureCollection;
-  datasetId: string;
+  datasetName: string;
+  [datasetName: string]: unknown;
 };
 
 export type ExecuteGetUsCountyGeojsonResult = {
@@ -24,33 +29,41 @@ export type ExecuteGetUsCountyGeojsonResult = {
   additionalData?: GetUsCountyGeojsonAdditionalData;
 };
 
-// Add delay function to prevent rate limiting
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
 /**
- * Get US County GeoJSON Tool from the Github repository: https://github.com/hyperknot/country-levels-export
- * Note: to avoid overloading the Github API, we only fetch the GeoJSON data every 1 second.
+ * Get US County GeoJSON Tool
  *
- * This tool retrieves the GeoJSON data for all counties in a US state by its state code.
- * It returns the counties' boundary geometries and properties.
+ * This tool can be used to get the GeoJSON data of one or more United States counties using the Github repository: https://github.com/hyperknot/country-levels-export
  *
- * Example user prompts:
+ * :::note
+ * to avoid overloading the Github API, we only fetch the GeoJSON data every 1 second.
+ * :::
+ *
+ * **Example user prompts:**
  * - "Get all counties in California"
  * - "Show me the county boundaries of New York state"
  * - "What are the counties in Texas?"
  *
- * Example code:
+ * :::tip
+ * This tool can be mixed with other tools for more complex tasks. For example, if you have a point datasets, you can use this tool
+ * to answer questions like "What are the total revenus in the counties of California?"
+ * :::
+ *
+ * @example
  * ```typescript
- * import { getVercelAiTool } from "@openassistant/osm";
+ * import { getOsmTool, OsmToolNames } from "@openassistant/osm";
  *
- * const countyTool = getVercelAiTool('getUsCountyGeojson');
+ * const countyTool = getOsmTool(OsmToolNames.getUsCountyGeojson);
  *
- * generateText({
- *   model: 'gpt-4o-mini',
+ * streamText({
+ *   model: openai('gpt-4o'),
  *   prompt: 'What are the counties in Texas?',
- *   tools: {getUsCountyGeojson: countyTool},
+ *   tools: {
+ *     county: countyTool,
+ *   },
  * });
  * ```
+ *
+ * For a more complete example, see the [OSM Tools Example using Next.js + Vercel AI SDK](https://github.com/openassistant/openassistant/tree/main/examples/vercel_osm_example).
  */
 export const getUsCountyGeojson = tool<
   GetUsCountyGeojsonFunctionArgs,
@@ -75,10 +88,11 @@ export const getUsCountyGeojson = tool<
       const features: GeoJSON.Feature[] = [];
 
       for (const fips of fipsCodes) {
+        // get cached county geojson if exists
         let geojson = getCachedData(fips);
         if (!geojson) {
-          // Add a delay between requests (1000ms) to avoid rate limiting
-          await delay(1000);
+          // Use the global rate limiter before making the API call
+          await githubRateLimiter.waitForNextCall();
 
           const stateCode = fips.substring(0, 2);
           const response = await fetch(
@@ -89,6 +103,7 @@ export const getUsCountyGeojson = tool<
           geojson = await response.json();
         }
         if (geojson) {
+          // cache the county geojson to avoid overloading the Github API
           cacheData(fips, geojson);
           features.push(geojson as unknown as GeoJSON.Feature);
         }
@@ -99,20 +114,18 @@ export const getUsCountyGeojson = tool<
         features,
       };
 
-      const datasetId = `county_${generateId()}`;
-
-      cacheData(datasetId, finalGeojson);
+      const outputDatasetName = `counties_${generateId()}`;
 
       return {
         llmResult: {
           success: true,
-          datasetId,
-          result: `Successfully fetched the GeoJSON data of the counties. The GeoJSON data has been cached with the id ${datasetId}.`,
+          datasetName: outputDatasetName,
+          result: `Successfully fetched the GeoJSON data of the counties. The GeoJSON data has been cached with the dataset name: ${outputDatasetName}.`,
         },
         additionalData: {
           fipsCodes,
-          geojson: finalGeojson,
-          datasetId,
+          datasetName: outputDatasetName,
+          [outputDatasetName]: finalGeojson,
         },
       };
     } catch (error) {

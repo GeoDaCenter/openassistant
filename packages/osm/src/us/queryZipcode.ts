@@ -1,6 +1,6 @@
-import { tool } from '@openassistant/utils';
 import { z } from 'zod';
-import { cacheData, getCachedData } from '../utils';
+import { cacheData, getCachedData, tool } from '@openassistant/utils';
+import { githubRateLimiter } from '../utils/rateLimiter';
 
 export type QueryZipcodeFunctionArgs = z.ZodObject<{
   mapBounds: z.ZodObject<{
@@ -32,25 +32,36 @@ export type ExecuteQueryUSZipcodesResult = {
 };
 
 /**
- * Query US Zipcodes Tool using the zipcode centroids geojson data from the Github repository: https://github.com/GeoDaCenter/data-and-lab
- * 
- * This tool queries US zipcodes within a given map bounds. It returns a list of zipcodes
- * with their coordinates that fall within the specified bounding box.
- * 
+ * Query US Zipcodes Tool
+ *
+ * This tool can be used to query US zipcodes within a given map bounds using the zipcode centroids geojson data from the Github repository: https://github.com/GeoDaCenter/data-and-lab
+ *
+ * :::tip
+ * This tool can be mixed with other tools for more complex tasks. For example, if you have a point datasets, you can use this tool
+ * to answer questions like "What are the total revenus in the zipcodes in current map view?"
+ * :::
+ *
  * Example user prompts:
- * - "Find all zipcodes in Manhattan"
- * - "What zipcodes are in the San Francisco Bay Area?"
+ * - "Find all zipcodes in current map view"
+ * - "What zipcodes are in the Los Angeles county?"
  * - "Get zipcodes within this map view"
- * 
- * Example code:
+ *
+ * @example
  * ```typescript
- * import { queryUSZipcodes, QueryUSZipcodesTool } from "@openassistant/osm";
- * 
- * const queryZipcodeTool: QueryUSZipcodesTool = {
- *   ...queryUSZipcodes,
- *   context: {}
- * };
+ * import { getOsmTool, OsmToolNames } from "@openassistant/osm";
+ *
+ * const queryZipcodeTool = getOsmTool(OsmToolNames.queryUSZipcodes);
+ *
+ * streamText({
+ *   model: openai('gpt-4o'),
+ *   prompt: 'what are the zipcodes in Los Angeles county?',
+ *   tools: {
+ *     queryZipcode: queryZipcodeTool,
+ *   },
+ * });
  * ```
+ *
+ * For a more complete example, see the [OSM Tools Example using Next.js + Vercel AI SDK](https://github.com/openassistant/openassistant/tree/main/examples/vercel_osm_example).
  */
 export const queryUSZipcodes = tool<
   QueryZipcodeFunctionArgs,
@@ -78,16 +89,20 @@ export const queryUSZipcodes = tool<
     try {
       const { mapBounds } = args;
       const { northwest, southeast } = mapBounds;
-      const cacheKey = 'us_zipcodes_centroids';
+      const zipcodeCentroidsDatasetName = 'us_zipcodes_centroids';
 
-      let geojson = getCachedData(cacheKey);
+      // get cached zipcode centroids geojson if exists
+      let geojson = getCachedData(zipcodeCentroidsDatasetName);
       if (!geojson) {
+        // Use the global rate limiter before making the API call
+        await githubRateLimiter.waitForNextCall();
+
         const response = await fetch(
           'https://raw.githubusercontent.com/GeoDaCenter/data-and-lab/refs/heads/gh-pages/data/us_zipcodes_centroids.geojson'
         );
         geojson = await response.json();
         if (geojson) {
-          cacheData(cacheKey, geojson);
+          cacheData(zipcodeCentroidsDatasetName, geojson);
         }
       }
 

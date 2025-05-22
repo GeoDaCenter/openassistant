@@ -1,8 +1,12 @@
-import { tool } from '@openassistant/utils';
+import {
+  cacheData,
+  generateId,
+  getCachedData,
+  tool,
+} from '@openassistant/utils';
 import { z } from 'zod';
 import zips from 'zip3';
-
-import { cacheData, generateId, getCachedData } from '../utils';
+import { githubRateLimiter } from '../utils/rateLimiter';
 
 // Add delay function to prevent rate limiting
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -13,15 +17,15 @@ export type GetUsZipcodeGeojsonFunctionArgs = z.ZodObject<{
 
 export type GetUsZipcodeGeojsonLlmResult = {
   success: boolean;
-  datasetId?: string;
+  datasetName?: string;
   result?: string;
   error?: string;
 };
 
 export type GetUsZipcodeGeojsonAdditionalData = {
   zipcodes: string[];
-  datasetId: string;
-  geojson: GeoJSON.FeatureCollection;
+  datasetName: string;
+  [datasetName: string]: unknown;
 };
 
 export type ExecuteGetUsZipcodeGeojsonResult = {
@@ -30,26 +34,40 @@ export type ExecuteGetUsZipcodeGeojsonResult = {
 };
 
 /**
- * Get US Zipcode GeoJSON Tool from the Github repository: https://github.com/greencoder/us-zipcode-to-geojson
- * Note: to avoid overloading the Github API, we only fetch the GeoJSON data every 1 second.
- *  
- * This tool retrieves the GeoJSON data for all zipcodes in a US state by its state code.
- * It returns the zipcodes' boundary geometries and properties.
+ * Get US Zipcode GeoJSON Tool
+ *
+ * This tool can be used to get the GeoJSON data of one or more United States zipcodes from the Github repository: https://github.com/greencoder/us-zipcode-to-geojson*
+ *
+ * :::tip
+ * This tool can be mixed with other tools for more complex tasks. For example, if you have a point datasets, you can use this tool
+ * to answer questions like "What are the total revenus in the zipcode of 10001, 10002, 10003?"
+ * :::
  *
  * Example user prompts:
  * - "Get all zipcodes in California"
  * - "Show me the zipcode boundaries of New York state"
  * - "What are the zipcodes in Texas?"
  *
- * Example code:
- * ```typescript
- * import { getUsZipcodeGeojson, GetUsZipcodeGeojsonTool } from "@openassistant/osm";
+ * :::note
+ * Note: to avoid overloading the Github API, we only fetch the GeoJSON data every 1 second.
+ * :::
  *
- * const zipcodeTool: GetUsZipcodeGeojsonTool = {
- *   ...getUsZipcodeGeojson,
- *   context: {}
- * };
+ * @example
+ * ```typescript
+ * import { getOsmTool, OsmToolNames } from "@openassistant/osm";
+ *
+ * const zipcodeTool = getOsmTool(OsmToolNames.getUsZipcodeGeojson);
+ *
+ * streamText({
+ *   model: openai('gpt-4o'),
+ *   prompt: 'Get all zipcodes in California',
+ *   tools: {
+ *     zipcode: zipcodeTool,
+ *   },
+ * });
  * ```
+ *
+ * For a more complete example, see the [OSM Tools Example using Next.js + Vercel AI SDK](https://github.com/openassistant/openassistant/tree/main/examples/vercel_osm_example).
  */
 export const getUsZipcodeGeojson = tool<
   GetUsZipcodeGeojsonFunctionArgs,
@@ -71,8 +89,8 @@ export const getUsZipcodeGeojson = tool<
       for (const zipcode of zipcodes) {
         let geojson = getCachedData(zipcode);
         if (!geojson) {
-          // Add a delay between requests (1000ms) to avoid rate limiting
-          await delay(1000);
+          // Use the global rate limiter before making the API call
+          await githubRateLimiter.waitForNextCall();
 
           // get state code from zipcode
           const prefix = zipcode.slice(0, 3);
@@ -100,20 +118,18 @@ export const getUsZipcodeGeojson = tool<
         features,
       };
 
-      const datasetId = `zipcode_${generateId()}`;
-
-      cacheData(datasetId, finalGeojson);
+      const outputDatasetName = `zipcodes_${generateId()}`;
 
       return {
         llmResult: {
           success: true,
-          datasetId,
-          result: `Successfully fetched the GeoJSON data of the zipcodes. The GeoJSON data has been cached with the id ${datasetId}.`,
+          datasetName: outputDatasetName,
+          result: `Successfully fetched the GeoJSON data of the zipcodes. The GeoJSON data has been cached with the dataset name: ${outputDatasetName}.`,
         },
         additionalData: {
           zipcodes,
-          geojson: finalGeojson,
-          datasetId,
+          datasetName: outputDatasetName,
+          [outputDatasetName]: finalGeojson,
         },
       };
     } catch (error) {

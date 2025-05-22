@@ -10,7 +10,8 @@
   "author": "Xun Li <lixun910@gmail.com>",
   "license": "ISC",
   "dependencies": {
-    "@openassistant/echarts": "workspace:*",
+    "@openassistant/components": "workspace:*",
+    "@openassistant/plots": "workspace:*",
     "@openassistant/ui": "workspace:*",
     "@openassistant/utils": "workspace:*",
     "react": "18.3.1",

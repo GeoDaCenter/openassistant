@@ -1,14 +1,16 @@
 import { AiAssistant } from '@openassistant/ui';
 import {
+  SpatialWeightsComponentContainer,
+  MoranScatterPlotContainer,
+} from '@openassistant/components';
+import {
   dataClassify,
   DataClassifyTool,
   spatialWeights,
   SpatialWeightsTool,
   GetGeometries,
-  SpatialWeightsToolComponent,
   globalMoran,
   GlobalMoranTool,
-  MoranScatterPlotToolComponent,
   spatialRegression,
   SpatialRegressionTool,
   lisa,
@@ -16,6 +18,7 @@ import {
   spatialJoin,
   SpatialJoinTool,
   buffer,
+  BufferTool,
 } from '@openassistant/geoda';
 import {
   geocoding,
@@ -23,30 +26,86 @@ import {
   getUsStateGeojson,
   getUsZipcodeGeojson,
   getUsCountyGeojson,
-  getCachedData,
+  RoutingTool,
+  roads,
+  RoadsTool,
 } from '@openassistant/osm';
-import { keplergl, KeplerglTool } from '@openassistant/keplergl';
+import { KeplerGlToolComponent } from '@openassistant/keplergl';
+import { GetDataset, keplergl, KeplerglTool } from '@openassistant/map';
 
 import { PointLayerData } from '@geoda/core';
 import { SAMPLE_DATASETS } from './dataset';
+import { useToolCache } from '@openassistant/core';
+import { getValuesFromGeoJSON } from '@openassistant/utils';
+
+function isGeoJson(obj: unknown): obj is GeoJSON.FeatureCollection {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'type' in obj &&
+    obj.type === 'FeatureCollection'
+  );
+}
 
 export default function App() {
+  const { toolCache, updateToolCache } = useToolCache();
+
+  const onToolFinished = (toolCallId: string, additionalData: unknown) => {
+    updateToolCache(toolCallId, additionalData);
+  };
+
   const getValues = async (datasetName: string, variableName: string) => {
-    return (SAMPLE_DATASETS[datasetName] as any[]).map(
-      (item) => item[variableName]
-    );
+    if (datasetName === 'myVenues') {
+      return (SAMPLE_DATASETS[datasetName] as any[]).map(
+        (item) => item[variableName]
+      );
+    }
+    // get cached values from other tools
+    if (toolCache[datasetName]) {
+      const data = toolCache[datasetName];
+      if (isGeoJson(data)) {
+        return getValuesFromGeoJSON(data, variableName) as any[];
+      }
+    }
+    throw new Error(`Dataset ${datasetName} not found`);
   };
 
   const getGeometries: GetGeometries = async (datasetName: string) => {
-    // get points in [longitude, latitude] array format from dataset
-    const points: PointLayerData[] = SAMPLE_DATASETS[datasetName].map(
-      (item, index) => ({
-        position: [item.longitude, item.latitude],
-        index,
-        neighbors: [],
-      })
-    );
-    return points;
+    // user provided geometries
+    if (datasetName === 'myVenues') {
+      // get points in [longitude, latitude] array format from dataset
+      const points: PointLayerData[] = SAMPLE_DATASETS[datasetName].map(
+        (item, index) => ({
+          position: [item.longitude, item.latitude],
+          index,
+          neighbors: [],
+        })
+      );
+      return points;
+    }
+    // get cached geometries from other tools
+    if (toolCache[datasetName]) {
+      const data = toolCache[datasetName];
+      if (isGeoJson(data)) {
+        return data.features;
+      }
+    }
+
+    throw new Error(`Dataset ${datasetName} not found`);
+  };
+
+  const getDataset: GetDataset = async (datasetName: string) => {
+    if (datasetName === 'myVenues') {
+      return SAMPLE_DATASETS[datasetName];
+    }
+    // get cached geometries from other tools
+    if (toolCache[datasetName]) {
+      const data = toolCache[datasetName];
+      if (data) {
+        return data;
+      }
+    }
+    throw new Error(`Dataset ${datasetName} not found`);
   };
 
   // Configure the dataClassify tool
@@ -64,7 +123,7 @@ export default function App() {
       ...spatialWeights.context,
       getGeometries,
     },
-    component: SpatialWeightsToolComponent,
+    component: SpatialWeightsComponentContainer,
   };
 
   const globalMoranTool: GlobalMoranTool = {
@@ -73,7 +132,7 @@ export default function App() {
       ...globalMoran.context,
       getValues,
     },
-    component: MoranScatterPlotToolComponent,
+    component: MoranScatterPlotContainer,
   };
 
   const regressionTool: SpatialRegressionTool = {
@@ -89,6 +148,7 @@ export default function App() {
     context: {
       ...lisa.context,
       getValues,
+      getGeometries,
     },
   };
 
@@ -105,30 +165,36 @@ export default function App() {
     ...getUsStateGeojson,
   };
 
-  const getMapData = async (datasetName: string) => {
-    let result;
-
-    const geoms = getCachedData(datasetName);
-    if (geoms) {
-      result = geoms;
-    }
-
-    return result;
-  };
-
-  const createMap: KeplerglTool = {
+  const keplerglTool: KeplerglTool = {
     ...keplergl,
     context: {
       ...keplergl.context,
-      getGeometries: getMapData,
+      getDataset,
     },
+    component: KeplerGlToolComponent,
   };
 
-  const routingTool = {
+  const routingTool: RoutingTool = {
     ...routing,
     context: {
       ...routing.context,
-      getGraphHopperApiKey: () => process.env.GRAPHHOPPER_API_KEY || '',
+      getMapboxToken: () => process.env.MAPBOX_TOKEN || '',
+    },
+  };
+
+  const bufferTool: BufferTool = {
+    ...buffer,
+    context: {
+      ...buffer.context,
+      getGeometries,
+    },
+  };
+
+  const roadsTool: RoadsTool = {
+    ...roads,
+    context: {
+      ...roads.context,
+      getGeometries,
     },
   };
 
@@ -143,9 +209,10 @@ export default function App() {
     getUsZipcodeGeojson,
     getUsCountyGeojson,
     geocoding,
-    buffer,
-    createMap,
+    buffer: bufferTool,
+    keplergl: keplerglTool,
     routing: routingTool,
+    roads: roadsTool,
   };
 
   const welcomeMessage = `
@@ -162,6 +229,7 @@ Hi! I'm your GeoDa assistant. Here are some example queries you can try:
 9. How can I geocode the address "123 Main St, San Francisco, CA"?
 10. How can I buffer the address "123 Main St, San Francisco, CA" by 10 KM?
 11. How can I get the routing directions between "123 Main St, San Francisco, CA" and "450 10th St, San Francisco, CA 94103"?
+12. Can I get the road network in zipcode 85248?
 `;
 
   const instructions = `
@@ -201,6 +269,7 @@ Note:
             welcomeMessage={welcomeMessage}
             instructions={instructions}
             theme="dark"
+            onToolFinished={onToolFinished}
           />
         </div>
       </div>

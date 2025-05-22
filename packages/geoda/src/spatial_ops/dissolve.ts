@@ -1,8 +1,8 @@
 import { tool } from '@openassistant/utils';
 import { z } from 'zod';
 import { spatialDissolve } from '@geoda/core';
-import { generateId, isSpatialToolContext } from '../utils';
-import { cacheData } from '../utils';
+import { isSpatialToolContext } from '../utils';
+import { cacheData, generateId } from '@openassistant/utils';
 import { SpatialToolContext } from '../types';
 import { Feature, Geometry } from 'geojson';
 
@@ -108,29 +108,26 @@ export const dissolve = tool<
     const dissolved = await spatialDissolve(geometries);
 
     // create a unique id for the dissolve result
-    const dissolveId = generateId();
-    cacheData(dissolveId, {
+    const outputDatasetName = `dissolve_${generateId()}`;
+    const outputGeojson = {
       type: 'FeatureCollection',
       features: [dissolved],
-    });
+    };
 
     return {
       llmResult: {
         success: true,
-        datasetName: dissolveId,
-        result:
-          'Geometries dissolved successfully, and it can be used as a dataset for mapping. The dataset name is: ' +
-          dissolveId,
+        datasetName: outputDatasetName,
+        result: `Geometries dissolved successfully, and it can be used as a dataset for mapping. The dataset name is: ${outputDatasetName}`,
       },
       additionalData: {
         datasetName,
-        geojson,
-        dissolved,
+        [outputDatasetName]: outputGeojson,
       },
     };
   },
   context: {
-    getGeometries: () => null,
+    getGeometries: async () => null,
   },
 });
 

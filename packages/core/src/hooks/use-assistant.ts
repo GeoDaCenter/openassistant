@@ -1,14 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import {
-  RegisterFunctionCallingProps,
-  StreamMessageCallback,
-  ToolCallMessage,
-} from '../types';
+import { StreamMessageCallback } from '../types';
 import { VercelAi } from '../llm/vercelai';
 import { createAssistant } from '../utils/create-assistant';
-import { Message, StepResult, ToolChoice, ToolSet } from 'ai';
+import { convertToCoreMessages, Message, ToolChoice, ToolSet } from 'ai';
 import { ExtendedTool } from '@openassistant/utils';
 
 /**
@@ -59,14 +55,6 @@ export type UseAssistantProps = {
   instructions: string;
   /** The history of messages exchanged with the assistant. */
   historyMessages?: Message[];
-  /**
-   * @deprecated Use tools instead.
-   * Custom functions/tools the assistant can use, either as an array or record object.
-   */
-  functions?:
-    | Array<RegisterFunctionCallingProps>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    | Record<string, ExtendedTool<any, any, any, any>>;
   /** Custom tools the assistant can use. E.g. `{ localQuery: localQueryTool }` */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   tools?: Record<string, ExtendedTool<any, any, any, any>>;
@@ -85,15 +73,12 @@ export type UseAssistantProps = {
  *
  * @param message - The text message to send to the assistant.
  * @param streamMessageCallback - Callback function to handle streaming response chunks.
- * @param onStepFinish - Optional callback triggered when a conversation step completes.
+ * @param onToolFinished - Optional callback triggered when a tool call completes.
  */
 export type SendTextMessageProps = {
   message: string;
   streamMessageCallback: StreamMessageCallback;
-  onStepFinish?: (
-    event: StepResult<ToolSet>,
-    toolCallMessages: ToolCallMessage[]
-  ) => Promise<void> | void;
+  onToolFinished?: (toolCallId: string, additionalData: unknown) => void;
 };
 
 /**
@@ -146,7 +131,7 @@ export function useAssistant(props: UseAssistantProps) {
 
       // restore the history messages
       if (props.historyMessages && props.historyMessages.length > 0) {
-        assistant.setMessages(props.historyMessages);
+        assistant.setMessages(convertToCoreMessages(props.historyMessages));
       }
 
       // set the abort controller
@@ -204,13 +189,13 @@ export function useAssistant(props: UseAssistantProps) {
   const sendTextMessage = async ({
     message,
     streamMessageCallback,
-    onStepFinish,
+    onToolFinished,
   }: SendTextMessageProps) => {
     await checkLLMInstance();
     await assistant?.processTextMessage({
       textMessage: message,
       streamMessageCallback,
-      onStepFinish,
+      onToolFinished,
     });
   };
 
@@ -239,14 +224,6 @@ export function useAssistant(props: UseAssistantProps) {
   const audioToText = async (audioBlob: Blob) => {
     await checkLLMInstance();
     return await assistant?.audioToText({ audioBlob });
-  };
-
-  /**
-   * Adds additional context to the assistant's conversation.
-   * @param {Object} params - The context and optional callback.
-   */
-  const addAdditionalContext = async ({ context }: { context: string }) => {
-    await assistant?.addAdditionalContext({ context });
   };
 
   /**
@@ -293,13 +270,6 @@ export function useAssistant(props: UseAssistantProps) {
      * @returns {Promise<string>} The transcribed text
      */
     audioToText,
-
-    /**
-     * Adds additional context to the ongoing conversation with the assistant.
-     * @param {{ context: string }} params - Object containing the context to add
-     * @returns {Promise<void>}
-     */
-    addAdditionalContext,
 
     /**
      * Immediately stops the current chat processing and response generation.

@@ -1,7 +1,8 @@
-import { tool } from '@openassistant/utils';
 import { z } from 'zod';
-import { generateId, cacheData } from './utils';
-import { isOsmToolContext, OsmToolContext } from './register-tools';
+import { FeatureCollection } from 'geojson';
+import { generateId, tool } from '@openassistant/utils';
+import { isMapboxToolContext, MapboxToolContext } from './register-tools';
+import { mapboxRateLimiter } from './utils/rateLimiter';
 
 type MapboxStep = {
   distance: number;
@@ -54,28 +55,19 @@ export type RoutingFunctionArgs = z.ZodObject<{
 
 export type RoutingLlmResult = {
   success: boolean;
-  result?: {
-    datasetName: string;
-    distance: number;
-    duration: number;
-    geometry: GeoJSON.LineString;
-    origin: GeoJSON.FeatureCollection;
-    destination: GeoJSON.FeatureCollection;
-    steps?: Array<{
-      distance: number;
-      duration: number;
-      geometry: GeoJSON.LineString;
-      name: string;
-      mode: string;
-      maneuver: {
-        location: [number, number];
-        bearing_before: number;
-        bearing_after: number;
-        type: string;
-        modifier?: string;
-      };
-    }>;
+  result?: string;
+  datasetName?: string;
+  distance?: number;
+  duration?: number;
+  origin?: {
+    longitude: number;
+    latitude: number;
   };
+  destination?: {
+    longitude: number;
+    latitude: number;
+  };
+  mode?: string;
   error?: string;
 };
 
@@ -89,8 +81,8 @@ export type RoutingAdditionalData = {
     latitude: number;
   };
   mode: string;
-  route: MapboxRoute;
-  cacheId: string;
+  datasetName: string;
+  [datasetName: string]: unknown;
 };
 
 export type ExecuteRoutingResult = {
@@ -100,33 +92,48 @@ export type ExecuteRoutingResult = {
 
 /**
  * Routing Tool
- * 
+ *
  * This tool calculates routes between two points using Mapbox's Directions API.
  * It supports different transportation modes (driving, walking, cycling) and returns
  * detailed route information including distance, duration, and turn-by-turn directions.
- * 
+ *
+ * :::tip
+ * If you don't know the coordinates of the origin or destination point, you can use the geocoding tool to get it.
+ * :::
+ *
  * Example user prompts:
  * - "Find the driving route from Times Square to Central Park"
  * - "How do I walk from the Eiffel Tower to the Louvre?"
  * - "Get cycling directions from my current location to the nearest coffee shop"
- * 
+ *
  * Example code:
  * ```typescript
- * import { routing, RoutingTool } from "@openassistant/osm";
- * 
- * const routingTool: RoutingTool = {
- *   ...routing,
- *   context: {
- *     getMapboxToken: () => "your-mapbox-token"
- *   }
- * };
+ * import { getOsmTool, OsmToolNames } from "@openassistant/osm";
+ *
+ * const geocodingTool = getOsmTool(OsmToolNames.geocoding);
+ * const routingTool = getOsmTool(OsmToolNames.routing, {
+ *   toolContext: {
+ *     getMapboxToken: () => process.env.MAPBOX_TOKEN!,
+ *   },
+ * });
+ *
+ * streamText({
+ *   model: openai('gpt-4o'),
+ *   prompt: 'Find the driving route from Times Square to Central Park',
+ *   tools: {
+ *     geocoding: geocodingTool,
+ *     routing: routingTool,
+ *   },
+ * });
  * ```
+ *
+ * For a more complete example, see the [OSM Tools Example using Next.js + Vercel AI SDK](https://github.com/openassistant/openassistant/tree/main/examples/vercel_osm_example).
  */
 export const routing = tool<
   RoutingFunctionArgs,
   RoutingLlmResult,
   RoutingAdditionalData,
-  OsmToolContext
+  MapboxToolContext
 >({
   description:
     'Get routing directions between two coordinates using Mapbox Directions API',
@@ -152,14 +159,15 @@ export const routing = tool<
       const { longitude: originLon, latitude: originLat } = origin;
       const { longitude: destLon, latitude: destLat } = destination;
 
-      // Generate cache key
-      const cacheKey = generateId();
-      if (!options?.context || !isOsmToolContext(options.context)) {
+      if (!options?.context || !isMapboxToolContext(options.context)) {
         throw new Error(
           'Context is required and must implement OsmToolContext'
         );
       }
       const mapboxAccessToken = options.context.getMapboxToken();
+
+      // Use the global rate limiter before making the API call
+      await mapboxRateLimiter.waitForNextCall();
 
       // Using Mapbox Directions API
       const url = `https://api.mapbox.com/directions/v5/mapbox/${mode}/${originLon},${originLat};${destLon},${destLat}?geometries=geojson&access_token=${mapboxAccessToken}`;
@@ -210,8 +218,7 @@ export const routing = tool<
         })),
       };
 
-      // Cache the route data
-      cacheData(cacheKey, {
+      const geojson: FeatureCollection = {
         type: 'FeatureCollection',
         features: [
           {
@@ -220,63 +227,38 @@ export const routing = tool<
             properties: {},
           },
         ],
-      });
+      };
+
+      // Generate output dataset name
+      const outputDatasetName = `routing_${generateId()}`;
 
       return {
         llmResult: {
           success: true,
-          result: {
-            datasetName: cacheKey,
-            distance: route.distance,
-            duration: route.duration,
-            geometry: route.geometry,
-            origin: {
-              type: 'FeatureCollection',
-              features: [
-                {
-                  type: 'Feature',
-                  geometry: {
-                    type: 'Point',
-                    coordinates: [originLon, originLat],
-                  },
-                  properties: {},
-                },
-              ],
-            },
-            destination: {
-              type: 'FeatureCollection',
-              features: [
-                {
-                  type: 'Feature',
-                  geometry: {
-                    type: 'Point',
-                    coordinates: [destLon, destLat],
-                  },
-                  properties: {},
-                },
-              ],
-            },
-          },
+          datasetName: outputDatasetName,
+          result: `Successfully calculated the routing directions between the origin and destination points. The GeoJSON data has been saved with the dataset name: ${outputDatasetName}.`,
+          distance: route.distance,
+          duration: route.duration,
+          origin: { longitude: originLon, latitude: originLat },
+          destination: { longitude: destLon, latitude: destLat },
+          mode,
         },
         additionalData: {
           origin: origin,
           destination: destination,
-          route,
-          cacheId: cacheKey,
           mode,
+          datasetName: outputDatasetName,
+          [outputDatasetName]: geojson,
         },
       };
     } catch (error) {
       clearTimeout(timeoutId);
-      if (error instanceof Error && error.name === 'AbortError') {
-        return {
-          llmResult: {
-            success: false,
-            error: 'Routing request timeout',
-          },
-        };
-      }
-      throw error;
+      return {
+        llmResult: {
+          success: false,
+          error: `Failed to calculate the routing directions between the origin and destination points: ${error}`,
+        },
+      };
     }
   },
   context: {
