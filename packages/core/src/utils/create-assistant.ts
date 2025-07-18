@@ -62,7 +62,7 @@ export async function createAssistant(props: UseAssistantProps) {
     toolChoice: props.toolChoice,
     maxSteps: props.maxSteps,
     toolCallStreaming: props.toolCallStreaming,
-    ...(props.baseURL? { baseURL: props.baseURL} : {}),
+    ...(props.baseUrl? { baseURL: props.baseUrl} : {}),
     ...(props.headers ? { headers: props.headers } : {}),
     ...(props.raw ? { raw: props.raw } : {}),
   });

@@ -47,7 +47,7 @@ export type UseAssistantProps = {
   /** Optional API version to use. */
   version?: string;
   /** Optional base URL for API requests. */
-  baseURL?: string;
+  baseUrl?: string;
   /** Optional description of the assistant's purpose. */
   description?: string;
   /** Controls randomness in responses (0-1). */
