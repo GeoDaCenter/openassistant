@@ -47,7 +47,7 @@ export type UseAssistantProps = {
   /** Optional API version to use. */
   version?: string;
   /** Optional base URL for API requests. */
-  baseUrl?: string;
+  baseURL?: string;
   /** Optional description of the assistant's purpose. */
   description?: string;
   /** Controls randomness in responses (0-1). */
@@ -71,6 +71,8 @@ export type UseAssistantProps = {
   abortController?: AbortController;
   /** Optional custom headers to include in API requests. */
   headers?: Record<string, string>;
+  /** Optional raw mode for ollama. */
+  raw?: boolean;
 };
 
 /**
