@@ -337,6 +337,9 @@ export abstract class VercelAiClient extends VercelAi {
       },
     });
 
+    // Note: If you encounter NDJSON (Newline Delimited JSON) issues where chunks contain
+    // multiple JSON objects, consider handling this at the provider level or using
+    // a custom provider that properly parses NDJSON before it reaches this client.
     for await (const chunk of fullStream) {
       if (chunk.type === 'text-delta') {
         messageContent = await this.handleTextStreaming(
